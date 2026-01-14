@@ -158,4 +158,5 @@ const URDFModelComponent = ({ modelName, urdfCode, description }) => {
   );
 };
 
+export default CodeBlock;
 export { CodeBlock, ROS2NodeComponent, SimulationComponent, URDFModelComponent };
