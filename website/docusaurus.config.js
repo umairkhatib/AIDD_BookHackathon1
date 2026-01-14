@@ -60,15 +60,7 @@ const config = {
     ],
   ],
 
-  themes: [
-    [
-      '@docusaurus/theme-classic',
-      {
-        customCss: require.resolve('./src/css/custom.css'),
-      },
-    ],
-    '@docusaurus/theme-mermaid',
-  ],
+  themes: ['@docusaurus/theme-mermaid'],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
