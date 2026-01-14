@@ -122,19 +122,19 @@ const config = {
             items: [
               {
                 label: 'ROS 2 Foundations',
-                to: '/docs/module-1-ros-foundations/intro',
+                to: '/docs/module-1-ros-foundations/integration',
               },
               {
                 label: 'Digital Twin',
-                to: '/docs/module-2-digital-twin/intro',
+                to: '/docs/module-2-digital-twin/integration',
               },
               {
                 label: 'AI Brain',
-                to: '/docs/module-3-ai-brain/intro',
+                to: '/docs/module-3-ai-brain/integration',
               },
               {
                 label: 'Vision-Language-Action',
-                to: '/docs/module-4-vla/intro',
+                to: '/docs/module-4-vla/integration',
               },
             ],
           },

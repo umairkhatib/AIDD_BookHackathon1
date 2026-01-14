@@ -1,5 +1,3 @@
-import { CodeBlock } from '@site/src/components/CodeBlock';
-
 ---
 sidebar_position: 6
 title: "Simulation Examples Integration"
@@ -125,7 +123,8 @@ ros2 topic echo /imu/mag
 
 ### Basic Gazebo Controller
 
-<CodeBlock title="gazebo_controller.py" language="python">
+### gazebo_controller.py
+
 ```python
 #!/usr/bin/env python3
 
@@ -205,11 +204,11 @@ def main(args=None):
 if __name__ == '__main__':
     main()
 ```
-</CodeBlock>
 
 ### Sensor Publisher Example
 
-<CodeBlock title="sensor_publisher.py" language="python">
+### sensor_publisher.py
+
 ```python
 #!/usr/bin/env python3
 
@@ -322,7 +321,6 @@ def main(args=None):
 if __name__ == '__main__':
     main()
 ```
-</CodeBlock>
 
 ## URDF Model Integration
 
@@ -330,10 +328,12 @@ The course includes several URDF models that work with Gazebo simulation:
 
 ### Mobile Base Model
 
-<URDFModelComponent
-  modelName="mobile_base"
-  description="A simple mobile robot base with differential drive."
-  urdfCode={`<?xml version="1.0"?>
+**Description:** A simple mobile robot base with differential drive.
+
+**URDF Model:**
+
+```xml
+<?xml version="1.0"?>
 <!-- Mobile Base Robot Model -->
 <robot name="mobile_base">
   <!-- Base Link -->
@@ -412,8 +412,8 @@ The course includes several URDF models that work with Gazebo simulation:
     <origin xyz="0.0 -0.2 -0.05" rpy="1.5708 0 0"/>
     <axis xyz="0 0 1"/>
   </joint>
-</robot>`}
-/>
+</robot>
+```
 
 ## Integration with ROS 2
 
