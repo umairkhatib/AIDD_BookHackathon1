@@ -1,0 +1,702 @@
+---
+sidebar_position: 1
+title: "Navigation Exercises"
+---
+
+# Navigation Exercises
+
+## Exercise 1: Basic Navigation with Nav2
+
+### Objective
+Set up and run a basic navigation system using the ROS 2 Navigation (Nav2) stack.
+
+### Requirements
+- Configure Nav2 for a simple robot
+- Create a map of a known environment
+- Implement autonomous navigation from start to goal
+- Demonstrate obstacle avoidance
+
+### Steps
+1. Create a configuration file for Nav2
+2. Set up a simple robot model with appropriate sensors
+3. Generate or create a map of the environment
+4. Implement a navigation node that sends goals to Nav2
+5. Test navigation in simulation
+
+### Solution Template
+```yaml
+# Navigation configuration (nav2_params.yaml)
+bt_navigator:
+  ros__parameters:
+    use_sim_time: True
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: /odom
+    bt_xml_filename: "navigate_w_replanning_and_recovery.xml"
+    default_nav_through_poses_bt_xml: "navigate_w_replanning_and_recovery.xml"
+    default_nav_to_pose_bt_xml: "navigate_w_replanning_and_recovery.xml"
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+
+controller_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 20.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    progress_checker_plugin: "progress_checker"
+    goal_checker_plugin: "goal_checker"
+    controller_plugins: ["FollowPath"]
+
+    FollowPath:
+      plugin: "nav2_rotation_shim_controller::RotationShimController"
+      # Additional controller parameters
+```
+
+### Verification
+```bash
+# Launch navigation
+ros2 launch nav2_bringup navigation_launch.py
+
+# Send a navigation goal
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {pose: {position: {x: 2.0, y: 2.0, z: 0.0}, orientation: {w: 1.0}}, header: {frame_id: 'map'}}"
+```
+
+## Exercise 2: Perception-Based Navigation
+
+### Objective
+Create a navigation system that incorporates sensor perception for dynamic obstacle avoidance.
+
+### Requirements
+- Integrate sensor data (LIDAR/camera) with navigation
+- Implement dynamic obstacle detection
+- Modify navigation behavior based on perceived obstacles
+- Ensure safe navigation around moving obstacles
+
+### Steps
+1. Set up sensor integration with Nav2
+2. Implement obstacle detection algorithm
+3. Create a perception-aware navigation planner
+4. Test with moving obstacles in simulation
+
+### Solution Template
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist, PoseStamped
+from nav2_msgs.action import NavigateToPose
+from rclpy.action import ActionClient
+
+
+class PerceptionNavigation(Node):
+    def __init__(self):
+        super().__init__('perception_navigation')
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # Subscribers
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/scan', self.scan_callback, 10
+        )
+
+        # Action client for navigation
+        self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+
+        # Navigation parameters
+        self.safe_distance = 0.8  # meters
+        self.obstacle_detected = False
+        self.current_goal = None
+
+        self.get_logger().info('Perception Navigation Node initialized')
+
+    def scan_callback(self, msg):
+        """Process LIDAR scan for obstacle detection."""
+        # Check for obstacles in front of robot
+        front_sector = msg.ranges[len(msg.ranges)//2-30:len(msg.ranges)//2+30]
+        min_distance = min([r for r in front_sector if r > 0 and r < float('inf')], default=float('inf'))
+
+        self.obstacle_detected = min_distance < self.safe_distance
+
+        if self.obstacle_detected:
+            self.get_logger().info(f'Obstacle detected at {min_distance:.2f}m, adjusting navigation')
+
+    def send_navigation_goal(self, x, y, theta=0.0):
+        """Send a navigation goal to Nav2."""
+        goal_msg = NavigateToPose.Goal()
+        goal_msg.pose.header.frame_id = 'map'
+        goal_msg.pose.pose.position.x = x
+        goal_msg.pose.pose.position.y = y
+        goal_msg.pose.pose.orientation.z = theta  # Simplified orientation
+
+        self.nav_client.wait_for_server()
+        future = self.nav_client.send_goal_async(goal_msg)
+        future.add_done_callback(self.goal_response_callback)
+
+    def goal_response_callback(self, future):
+        """Handle navigation goal response."""
+        goal_handle = future.result()
+        if not goal_handle.accepted:
+            self.get_logger().info('Goal rejected')
+            return
+
+        self.get_logger().info('Goal accepted')
+        result_future = goal_handle.get_result_async()
+        result_future.add_done_callback(self.goal_result_callback)
+
+    def goal_result_callback(self, future):
+        """Handle navigation result."""
+        result = future.result().result
+        self.get_logger().info(f'Navigation result: {result}')
+```
+
+### Verification
+```bash
+# Run the perception navigation node
+ros2 run your_package perception_navigation
+
+# Monitor navigation performance
+ros2 topic echo /navigate_to_pose/_action/status
+```
+
+## Exercise 3: SLAM and Navigation Integration
+
+### Objective
+Implement simultaneous localization and mapping (SLAM) with navigation in an unknown environment.
+
+### Requirements
+- Set up SLAM for map building
+- Integrate SLAM with navigation system
+- Navigate in an unknown environment while building the map
+- Demonstrate path planning on the dynamically created map
+
+### Steps
+1. Configure SLAM (e.g., Cartographer or Slam Toolbox)
+2. Integrate SLAM with Nav2
+3. Implement exploration behavior
+4. Test navigation in unknown environment
+
+### Solution Template
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from nav_msgs.msg import OccupancyGrid
+from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Bool
+
+
+class SLAMNavigation(Node):
+    def __init__(self):
+        super().__init__('slam_navigation')
+
+        # Subscribers
+        self.map_sub = self.create_subscription(
+            OccupancyGrid, '/map', self.map_callback, 10
+        )
+
+        self.initial_pose_pub = self.create_publisher(
+            PoseStamped, '/initialpose', 10
+        )
+
+        # Navigation state
+        self.current_map = None
+        self.map_updated = False
+        self.exploration_active = True
+
+        # Timer for exploration
+        self.explore_timer = self.create_timer(5.0, self.exploration_behavior)
+
+        self.get_logger().info('SLAM Navigation Node initialized')
+
+    def map_callback(self, msg):
+        """Process updated map from SLAM."""
+        self.current_map = msg
+        self.map_updated = True
+        self.get_logger().info('Map updated, size: {}x{}'.format(
+            msg.info.width, msg.info.height
+        ))
+
+    def exploration_behavior(self):
+        """Implement exploration behavior."""
+        if self.exploration_active and self.current_map:
+            # Simple frontier-based exploration
+            next_waypoint = self.find_next_exploration_waypoint()
+
+            if next_waypoint:
+                # Send navigation goal to next waypoint
+                self.send_navigation_goal(next_waypoint[0], next_waypoint[1])
+                self.get_logger().info(f'Exploring toward: {next_waypoint}')
+
+    def find_next_exploration_waypoint(self):
+        """Find next waypoint for exploration."""
+        # This is a simplified implementation
+        # In practice, you would implement frontier-based exploration
+        if self.current_map:
+            # For this example, return a point slightly ahead
+            # In reality, you'd find unexplored areas at the map boundary
+            return (self.current_map.info.origin.position.x + 2.0,
+                   self.current_map.info.origin.position.y + 2.0)
+        return None
+```
+
+### Verification
+```bash
+# Launch SLAM and navigation
+ros2 launch slam_toolbox online_async_launch.py
+ros2 launch nav2_bringup navigation_launch.py
+
+# Start exploration
+ros2 run your_package slam_navigation
+```
+
+## Exercise 4: Multi-Robot Navigation
+
+### Objective
+Implement coordination for multiple robots navigating in the same environment.
+
+### Requirements
+- Set up multiple robot simulation
+- Implement collision avoidance between robots
+- Coordinate navigation goals
+- Demonstrate formation navigation
+
+### Steps
+1. Create multiple robot models
+2. Set up robot namespaces
+3. Implement coordination algorithm
+4. Test multi-robot navigation
+
+### Solution Template
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Twist
+from std_msgs.msg import String
+import json
+
+
+class MultiRobotCoordinator(Node):
+    def __init__(self):
+        super().__init__('multi_robot_coordinator')
+
+        # Publishers for each robot
+        self.robot1_cmd_pub = self.create_publisher(Twist, '/robot1/cmd_vel', 10)
+        self.robot2_cmd_pub = self.create_publisher(Twist, '/robot2/cmd_vel', 10)
+
+        # Subscribers for robot positions
+        self.robot1_pos_sub = self.create_subscription(
+            PoseStamped, '/robot1/current_pose', self.robot1_pose_callback, 10
+        )
+        self.robot2_pos_sub = self.create_subscription(
+            PoseStamped, '/robot2/current_pose', self.robot2_pose_callback, 10
+        )
+
+        # Robot positions
+        self.robot1_pos = (0.0, 0.0)
+        self.robot2_pos = (0.0, 0.0)
+
+        # Timer for coordination
+        self.coordination_timer = self.create_timer(0.1, self.coordinate_robots)
+
+        self.get_logger().info('Multi-Robot Coordinator initialized')
+
+    def robot1_pose_callback(self, msg):
+        """Update robot 1 position."""
+        self.robot1_pos = (msg.pose.position.x, msg.pose.position.y)
+
+    def robot2_pose_callback(self, msg):
+        """Update robot 2 position."""
+        self.robot2_pos = (msg.pose.position.x, msg.pose.position.y)
+
+    def coordinate_robots(self):
+        """Coordinate robot navigation to avoid collisions."""
+        # Calculate distance between robots
+        dx = self.robot1_pos[0] - self.robot2_pos[0]
+        dy = self.robot1_pos[1] - self.robot2_pos[1]
+        distance = (dx**2 + dy**2)**0.5
+
+        safe_distance = 1.0  # meters
+
+        if distance < safe_distance:
+            # Robots are too close, implement collision avoidance
+            self.implement_collision_avoidance()
+        else:
+            # Robots are at safe distance, continue normal navigation
+            self.continue_normal_navigation()
+
+    def implement_collision_avoidance(self):
+        """Implement collision avoidance behavior."""
+        # Simple behavior: make one robot wait
+        # In practice, you'd implement more sophisticated coordination
+        cmd1 = Twist()
+        cmd1.linear.x = 0.0  # Stop robot 1
+        cmd1.angular.z = 0.0
+
+        cmd2 = Twist()
+        cmd2.linear.x = 0.3  # Continue with robot 2
+        cmd2.angular.z = 0.0
+
+        self.robot1_cmd_pub.publish(cmd1)
+        self.robot2_cmd_pub.publish(cmd2)
+
+        self.get_logger().info('Collision avoidance activated')
+
+    def continue_normal_navigation(self):
+        """Continue normal navigation."""
+        # Resume normal navigation behavior
+        pass
+```
+
+### Verification
+```bash
+# Launch multiple robots
+ros2 launch your_package multi_robot.launch.py
+
+# Run coordinator
+ros2 run your_package multi_robot_coordinator
+
+# Monitor robot positions
+ros2 topic echo /robot1/current_pose
+ros2 topic echo /robot2/current_pose
+```
+
+## Exercise 5: Perception Pipeline with Isaac Tools
+
+### Objective
+Implement a perception pipeline using Isaac Sim and Isaac ROS tools for navigation.
+
+### Requirements
+- Set up Isaac Sim with appropriate sensors
+- Configure Isaac ROS perception nodes
+- Integrate perception output with navigation
+- Demonstrate perception-enhanced navigation
+
+### Steps
+1. Create Isaac Sim scene with objects
+2. Configure robot with perception sensors
+3. Set up Isaac ROS perception pipeline
+4. Integrate with navigation system
+
+### Solution Template
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, LaserScan
+from vision_msgs.msg import Detection2DArray
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+
+
+class IsaacPerceptionNavigation(Node):
+    def __init__(self):
+        super().__init__('isaac_perception_navigation')
+
+        # Create CV bridge
+        self.cv_bridge = CvBridge()
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.status_pub = self.create_publisher(String, '/navigation_status', 10)
+
+        # Subscribers
+        self.image_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.image_callback, 10
+        )
+        self.detection_sub = self.create_subscription(
+            Detection2DArray, '/detectnet/detections', self.detection_callback, 10
+        )
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/scan', self.scan_callback, 10
+        )
+
+        # Perception state
+        self.latest_detections = []
+        self.obstacle_detected = False
+        self.person_detected = False
+
+        # Timer for navigation logic
+        self.nav_timer = self.create_timer(0.1, self.perception_navigation_logic)
+
+        self.get_logger().info('Isaac Perception Navigation initialized')
+
+    def image_callback(self, msg):
+        """Process RGB image."""
+        try:
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+            # Process image if needed
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+
+    def detection_callback(self, msg):
+        """Process object detections."""
+        self.latest_detections = msg.detections
+
+        # Check for specific objects
+        self.person_detected = any(
+            any(result.id == 'person' for result in detection.results)
+            for detection in self.latest_detections
+        )
+
+    def scan_callback(self, msg):
+        """Process LIDAR scan for navigation."""
+        # Check for obstacles
+        front_sector = msg.ranges[len(msg.ranges)//2-15:len(msg.ranges)//2+15]
+        min_distance = min([r for r in front_sector if r > 0 and r < float('inf')], default=float('inf'))
+
+        self.obstacle_detected = min_distance < 0.8
+
+    def perception_navigation_logic(self):
+        """Navigation logic based on perception."""
+        cmd = Twist()
+
+        if self.person_detected:
+            # Person detected, slow down and be cautious
+            cmd.linear.x = 0.2
+            cmd.angular.z = 0.0
+            self.get_logger().info('Person detected, proceeding cautiously')
+        elif self.obstacle_detected:
+            # Obstacle detected, stop and turn
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.5
+            self.get_logger().info('Obstacle detected, turning')
+        else:
+            # Clear path, move forward
+            cmd.linear.x = 0.5
+            cmd.angular.z = 0.0
+
+        self.cmd_vel_pub.publish(cmd)
+
+        # Publish status
+        status_msg = String()
+        if self.person_detected:
+            status_msg.data = 'PERSON_DETECTED'
+        elif self.obstacle_detected:
+            status_msg.data = 'OBSTACLE_DETECTED'
+        else:
+            status_msg.data = 'CLEAR_PATH'
+        self.status_pub.publish(status_msg)
+```
+
+### Verification
+```bash
+# Launch Isaac Sim with perception
+ros2 launch isaac_ros_apriltag isaac_ros_apriltag.launch.py
+
+# Run perception navigation
+ros2 run your_package isaac_perception_navigation
+
+# Monitor perception output
+ros2 topic echo /detectnet/detections
+ros2 topic echo /navigation_status
+```
+
+## Exercise 6: Path Planning Optimization
+
+### Objective
+Implement an optimized path planning algorithm that considers multiple factors.
+
+### Requirements
+- Implement A* or Dijkstra path planning
+- Consider terrain costs, safety margins, and efficiency
+- Optimize for multiple objectives
+- Integrate with Nav2
+
+### Steps
+1. Implement custom path planner
+2. Define cost functions for different terrains
+3. Integrate with Nav2 as custom plugin
+4. Test optimization in various scenarios
+
+### Solution Template
+```python
+#!/usr/bin/env python3
+
+import numpy as np
+import heapq
+from typing import List, Tuple
+
+
+class OptimizedPathPlanner:
+    def __init__(self, map_resolution: float = 0.1):
+        self.resolution = map_resolution
+        self.map_data = None
+
+    def set_map(self, occupancy_grid):
+        """Set the occupancy grid map."""
+        self.map_data = np.array(occupancy_grid.data).reshape(
+            occupancy_grid.info.height,
+            occupancy_grid.info.width
+        )
+
+    def plan_path(self, start: Tuple[int, int], goal: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Plan an optimized path using A* algorithm."""
+        if not self.map_data:
+            return []
+
+        rows, cols = self.map_data.shape
+        open_set = [(0, start)]  # (cost, position)
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.heuristic(start, goal)}
+
+        while open_set:
+            current_cost, current = heapq.heappop(open_set)
+
+            if current == goal:
+                return self.reconstruct_path(came_from, current)
+
+            # Check 8-connected neighbors
+            for neighbor in self.get_neighbors(current, rows, cols):
+                if self.is_valid_cell(neighbor):
+                    tentative_g_score = g_score[current] + self.calculate_cost(current, neighbor)
+
+                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = g_score[neighbor] + self.heuristic(neighbor, goal)
+
+                        if neighbor not in [item[1] for item in open_set]:
+                            heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+        return []  # No path found
+
+    def heuristic(self, a: Tuple[int, int], b: Tuple[int, int]) -> float:
+        """Calculate heuristic (Euclidean distance)."""
+        return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
+
+    def calculate_cost(self, from_pos: Tuple[int, int], to_pos: Tuple[int, int]) -> float:
+        """Calculate movement cost considering terrain."""
+        # Base cost
+        cost = self.heuristic(from_pos, to_pos)
+
+        # Add terrain cost based on occupancy value
+        terrain_cost = self.map_data[to_pos[1], to_pos[0]] / 100.0  # Normalize occupancy value
+        cost += terrain_cost * 5  # Weight for terrain cost
+
+        return cost
+
+    def get_neighbors(self, pos: Tuple[int, int], rows: int, cols: int) -> List[Tuple[int, int]]:
+        """Get 8-connected neighbors."""
+        neighbors = []
+        for dr in [-1, 0, 1]:
+            for dc in [-1, 0, 1]:
+                if dr == 0 and dc == 0:
+                    continue
+                nr, nc = pos[0] + dr, pos[1] + dc
+                if 0 <= nr < rows and 0 <= nc < cols:
+                    neighbors.append((nr, nc))
+        return neighbors
+
+    def is_valid_cell(self, pos: Tuple[int, int]) -> bool:
+        """Check if a cell is valid (not occupied)."""
+        if not self.map_data:
+            return False
+
+        row, col = pos
+        if row < 0 or row >= self.map_data.shape[0] or col < 0 or col >= self.map_data.shape[1]:
+            return False
+
+        return self.map_data[row, col] < 50  # Occupancy threshold
+
+    def reconstruct_path(self, came_from: dict, current: Tuple[int, int]) -> List[Tuple[int, int]]:
+        """Reconstruct the path from came_from dictionary."""
+        path = [current]
+        while current in came_from:
+            current = came_from[current]
+            path.append(current)
+        path.reverse()
+        return path
+```
+
+### Verification
+```bash
+# Test path planner with different scenarios
+python3 -c "
+from path_planner import OptimizedPathPlanner
+import numpy as np
+
+# Create a simple test map
+test_map = np.zeros((20, 20))
+test_map[10, 10] = 100  # Obstacle
+
+planner = OptimizedPathPlanner()
+planner.map_data = test_map
+
+path = planner.plan_path((1, 1), (18, 18))
+print(f'Found path with {len(path)} points')
+"
+```
+
+## Challenge Exercise: Autonomous Exploration
+
+### Objective
+Combine all learned concepts to create an autonomous exploration system.
+
+### Requirements
+- Implement complete perception-navigation pipeline
+- Use SLAM for mapping unknown environments
+- Implement exploration strategy
+- Handle dynamic obstacles and changing environments
+- Optimize for exploration efficiency
+
+### Steps
+1. Integrate perception, navigation, and SLAM
+2. Implement exploration algorithm
+3. Add dynamic obstacle handling
+4. Optimize exploration path
+
+### Solution Approach
+1. Use frontier-based exploration
+2. Integrate with Isaac tools for enhanced perception
+3. Implement multi-objective optimization
+4. Add safety mechanisms
+
+### Verification
+```bash
+# Full system integration test
+# Launch all components
+ros2 launch your_package full_autonomous_system.launch.py
+
+# Monitor system performance
+ros2 topic echo /exploration_progress
+ros2 topic echo /mapped_area_percentage
+ros2 action list
+```
+
+## Assessment Criteria
+
+Your exercises will be evaluated based on:
+
+1. **Implementation Quality (35%)**: Correctness and efficiency of code
+2. **Functionality (30%)**: System works as expected in simulation
+3. **Integration (20%)**: Proper integration of perception and navigation
+4. **Documentation (15%)**: Clear comments and explanations
+
+## Resources
+
+- [Nav2 Documentation](https://navigation.ros.org/)
+- [Isaac Sim Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html)
+- [Isaac ROS Documentation](https://nvidia-isaac-ros.github.io/repositories_and_packages.html)
+- [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox)
+
+## Next Steps
+
+After completing these exercises, you should be able to:
+- Set up and configure Nav2 for different robots
+- Integrate perception systems with navigation
+- Implement SLAM-based navigation
+- Handle multi-robot coordination
+- Optimize navigation for specific scenarios

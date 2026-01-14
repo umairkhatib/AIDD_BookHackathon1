@@ -1,0 +1,194 @@
+---
+sidebar_position: 1
+title: "Capstone Project Overview"
+---
+
+# Capstone Project: Autonomous Humanoid Robotics System
+
+## Overview
+
+The capstone project brings together all concepts learned throughout the Physical AI & Humanoid Robotics course. Students will create an autonomous humanoid robot that can perceive its environment, understand natural language commands, plan and execute complex tasks, and interact safely with humans in a simulated environment.
+
+## Project Goals
+
+The capstone project aims to demonstrate:
+
+1. **Integrated System Design**: Combining all course modules into a cohesive system
+2. **Practical Application**: Applying theoretical knowledge to solve real-world problems
+3. **Technical Proficiency**: Demonstrating mastery of ROS 2, simulation, perception, navigation, and AI integration
+4. **Innovation**: Encouraging creative solutions to complex robotics challenges
+
+## Project Requirements
+
+### Functional Requirements
+
+1. **Perception System**:
+   - Real-time environment sensing using multiple modalities
+   - Object detection and recognition
+   - Spatial understanding and mapping
+
+2. **Natural Language Interface**:
+   - Voice command recognition and interpretation
+   - LLM-driven task planning and execution
+   - Context-aware command understanding
+
+3. **Navigation and Mobility**:
+   - Autonomous navigation in complex environments
+   - Dynamic obstacle avoidance
+   - Multi-floor navigation capability
+
+4. **Manipulation**:
+   - Object grasping and manipulation
+   - Tool use and task execution
+   - Human-safe interaction protocols
+
+5. **Human-Robot Interaction**:
+   - Natural communication patterns
+   - Socially appropriate behaviors
+   - Collaborative task execution
+
+### Non-Functional Requirements
+
+1. **Performance**: System must respond to commands within 5 seconds
+2. **Reliability**: System must operate without failure for 30 minutes of continuous operation
+3. **Safety**: System must implement safety protocols to prevent harm
+4. **Robustness**: System must handle unexpected situations gracefully
+
+## System Architecture
+
+The capstone system architecture integrates all course components:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           CAPSTONE SYSTEM                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────┐ │
+│  │   Perception    │  │  Language &     │  │    Action & Control     │ │
+│  │   Processing    │  │  Understanding  │  │    Execution          │ │
+│  │                 │  │                 │  │                       │ │
+│  │ • Vision        │  │ • Speech Rec.   │  │ • Motion Planning     │ │
+│  │ • LIDAR         │  │ • LLM Integration│ │ • Path Planning       │ │
+│  │ • IMU           │  │ • Command Parsing│ │ • Manipulation Control│ │
+│  │ • Depth         │  │ • Context Mgmt  │  │ • Navigation          │ │
+│  └─────────────────┘  └─────────────────┘  └─────────────────────────┘ │
+│                              │                            │            │
+│                              └───────────┐    ┌───────────┘            │
+│                                          │    │                        │
+│                                   ┌─────────────────┐                 │
+│                                   │  Integration    │                 │
+│                                   │  Layer          │                 │
+│                                   │                 │                 │
+│                                   │ • State Mgmt    │                 │
+│                                   │ • Safety Checks │                 │
+│                                   │ • Behavior Arb. │                 │
+│                                   │ • Coordination  │                 │
+│                                   └─────────────────┘                 │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Key Integration Points
+
+1. **Sensor Fusion**: Combining data from multiple sensors for robust perception
+2. **Language-Action Bridge**: Converting natural language to executable actions
+3. **Behavior Coordination**: Managing multiple concurrent behaviors
+4. **Safety Integration**: Ensuring safe operation at all system levels
+
+## Project Phases
+
+### Phase 1: System Design and Architecture
+- Define system architecture and component interfaces
+- Plan integration between modules
+- Establish testing and validation procedures
+
+### Phase 2: Component Integration
+- Integrate perception systems
+- Connect language understanding components
+- Implement action execution modules
+- Develop integration layer
+
+### Phase 3: System Integration
+- Combine all components into complete system
+- Implement system-level behaviors
+- Test integrated functionality
+
+### Phase 4: Validation and Optimization
+- Validate system performance against requirements
+- Optimize for efficiency and robustness
+- Document lessons learned and improvements
+
+## Evaluation Criteria
+
+### Technical Implementation (50%)
+- Proper integration of all course modules
+- Correct implementation of system components
+- Effective use of Isaac tools and frameworks
+- Code quality and documentation
+
+### Functionality (30%)
+- System performs required tasks successfully
+- Robust handling of various scenarios
+- Proper safety and error handling
+- Efficient resource utilization
+
+### Innovation and Creativity (20%)
+- Creative solutions to challenges
+- Novel approaches to integration
+- Thoughtful extensions beyond basic requirements
+
+## Project Deliverables
+
+1. **System Implementation**: Fully functional capstone system
+2. **Technical Documentation**: Architecture, design decisions, and implementation details
+3. **User Manual**: Instructions for operating the system
+4. **Validation Report**: Testing results and performance analysis
+5. **Presentation**: Demonstration of system capabilities
+
+## Timeline
+
+The capstone project is designed to be completed over 4-6 weeks:
+
+- **Week 1**: System design and architecture
+- **Week 2-3**: Component integration
+- **Week 4**: System integration and testing
+- **Week 5-6**: Validation, optimization, and documentation
+
+## Resources and Support
+
+### Provided Resources
+- Complete simulation environment with humanoid robot model
+- Pre-trained models for perception and language understanding
+- Testing framework and validation tools
+- Sample implementations and examples
+
+### Support Channels
+- Course instructors for technical guidance
+- Peer collaboration opportunities
+- Online forums for troubleshooting
+- Office hours for complex issues
+
+## Getting Started
+
+To begin the capstone project:
+
+1. Review the complete course materials to ensure understanding of all concepts
+2. Examine the provided simulation environment and robot model
+3. Plan your system architecture considering integration challenges
+4. Begin with component-level testing before system integration
+5. Iterate and validate at each phase
+
+## Success Tips
+
+1. **Start Early**: Begin planning and design early in the timeline
+2. **Iterate Frequently**: Test components individually before integration
+3. **Document Decisions**: Keep records of design choices and trade-offs
+4. **Validate Continuously**: Test functionality at each integration step
+5. **Think Holistically**: Consider how components interact in the complete system
+
+## Next Steps
+
+After reviewing this overview, proceed to:
+1. [System Architecture](../architecture/capstone-architecture.mdx) - Detailed architectural design
+2. [Implementation Guide](../implementation/capstone-implementation.mdx) - Step-by-step implementation instructions
+3. [Evaluation Criteria](../evaluation/evaluation-criteria.mdx) - Detailed grading rubric
+
+The capstone project represents the culmination of your learning in this course. Take time to understand the requirements fully before beginning implementation, and don't hesitate to seek guidance when facing challenges.

@@ -1,0 +1,243 @@
+---
+sidebar_position: 8
+title: "Student Workflow Test - ROS 2 Fundamentals"
+---
+
+# Student Workflow Test - ROS 2 Fundamentals
+
+## Overview
+
+This document outlines the complete student workflow for the ROS 2 Fundamentals module. It serves as both a testing guide to verify the module works as intended and a student tutorial for completing the module successfully.
+
+## Prerequisites
+
+Before starting this module, students should have:
+
+1. **System Requirements Met**:
+   - Ubuntu 22.04 LTS (or WSL2 on Windows)
+   - 16GB+ RAM
+   - Python 3.11+
+   - Node.js 18.x+
+
+2. **Software Dependencies Installed**:
+   - ROS 2 Humble Hawksbill
+   - Docusaurus development environment
+   - Git, pip, npm
+
+3. **Course Repository Cloned**:
+   ```bash
+   git clone https://github.com/[organization]/physical-ai-humanoid-course.git
+   cd physical-ai-humanoid-course
+   ```
+
+## Step 1: Environment Setup
+
+### 1.1 Run the Setup Script
+```bash
+./scripts/setup-dev-env.sh
+```
+
+**Expected Outcome**: The script should complete without errors, installing all necessary dependencies.
+
+### 1.2 Verify ROS 2 Installation
+```bash
+source /opt/ros/humble/setup.bash
+ros2 topic list
+```
+
+**Expected Outcome**: Should show an empty list or system topics without errors.
+
+### 1.3 Verify Docusaurus Installation
+```bash
+cd website
+npm run start
+```
+
+**Expected Outcome**: The course website should start and be accessible at http://localhost:3000
+
+## Step 2: Learn ROS 2 Concepts
+
+### 2.1 Study Core Concepts
+Read through the following materials in order:
+
+1. [ROS 2 Architecture Concepts](./concepts/ros2-architecture.mdx)
+2. [Nodes, Topics, and Services Architecture](./architecture/nodes-topics-services.mdx)
+3. [rclpy Implementation Examples](./implementation/rclpy-examples.mdx)
+
+### 2.2 Verify Understanding
+After reading each section, students should be able to:
+- Explain the difference between nodes, topics, and services
+- Describe the publisher-subscriber communication pattern
+- Understand Quality of Service (QoS) settings
+- Identify the basic structure of a ROS 2 node
+
+## Step 3: Hands-On Practice
+
+### 3.1 Run Basic Examples
+```bash
+# Navigate to examples directory
+cd simulation-examples/python-scripts/ros2_examples
+
+# Run the hello world example
+python3 hello_world.py
+```
+
+In a separate terminal:
+```bash
+# Echo the topic to see messages
+ros2 topic echo /hello_world std_msgs/msg/String
+```
+
+**Expected Outcome**: The publisher should continuously publish "Hello World" messages with a counter, and the echo command should display them.
+
+### 3.2 Create Your First Node
+Follow the exercises in [Basic ROS 2 Node Exercises](./exercises/basic-ros2-exercises.mdx) to create:
+
+1. A simple publisher node
+2. A subscriber node
+3. A parameter-based publisher
+4. A service server and client
+
+**Expected Outcome**: All custom nodes should run without errors and demonstrate proper ROS 2 communication patterns.
+
+### 3.3 Test Joint Control Example
+```bash
+# Navigate to joint control example
+cd simulation-examples/ros2-workspaces/basic_nodes
+
+# Run the joint control example
+python3 joint_control_example.py
+```
+
+**Expected Outcome**: The node should start and begin executing different motion patterns as described in the code.
+
+## Step 4: Work with URDF Models
+
+### 4.1 Examine URDF Examples
+Review the provided URDF models in `simulation-examples/ros2-workspaces/urdf_models/`:
+
+1. `simple_humanoid.urdf` - Basic humanoid model
+2. `mobile_base.urdf` - Mobile robot base
+3. `simple_arm.urdf` - Simple robotic arm
+
+### 4.2 Load URDF Model (Optional)
+```bash
+# Visualize the URDF model (requires xacro and rviz2)
+ros2 run xacro xacro simulation-examples/ros2-workspaces/urdf_models/simple_humanoid.urdf
+```
+
+## Step 5: Complete Assessment
+
+### 5.1 Take the Assessment
+Complete all sections of the [ROS 2 Fundamentals Assessment](./assessment.mdx):
+
+1. **Conceptual Questions**: Answer all questions about ROS 2 architecture
+2. **Practical Implementation**: Create the required nodes
+3. **Analysis and Debugging**: Solve the provided scenarios
+4. **Advanced Concepts**: Implement the service example
+
+### 5.2 Verify Your Solutions
+Test each of your implementations:
+
+```bash
+# Test your publisher node
+python3 your_publisher_node.py
+
+# Test your subscriber node
+python3 your_subscriber_node.py
+
+# Test your parameter-based node
+python3 your_parameter_node.py --ros-args -p message:="Test Message" -p frequency:=2.0
+
+# Test your service
+# Terminal 1: Run the service server
+python3 your_service_server.py
+
+# Terminal 2: Run the service client
+python3 your_service_client.py
+```
+
+## Step 6: Integration and Documentation
+
+### 6.1 Use Interactive Elements
+Interact with the code examples in the [Integration page](./integration.mdx):
+
+- Run the provided code snippets
+- Experiment with different parameters
+- Verify that the documentation examples work as described
+
+### 6.2 Document Your Learning
+Create a brief summary of:
+- Key concepts learned
+- Challenges encountered and how you solved them
+- Questions that arose during the module
+
+## Step 7: Self-Assessment
+
+### 7.1 Knowledge Check
+By the end of this module, you should be able to:
+
+- [ ] Create and run a basic ROS 2 publisher node
+- [ ] Create and run a basic ROS 2 subscriber node
+- [ ] Explain the difference between topics and services
+- [ ] Use parameters in ROS 2 nodes
+- [ ] Implement a simple service server and client
+- [ ] Understand Quality of Service (QoS) concepts
+- [ ] Work with basic URDF models
+
+### 7.2 Practical Skills Check
+You should be able to:
+
+- [ ] Run multiple ROS 2 nodes simultaneously
+- [ ] Use ROS 2 command-line tools (ros2 topic, ros2 service, etc.)
+- [ ] Debug basic ROS 2 communication issues
+- [ ] Create custom message and service definitions
+- [ ] Use timers and proper node lifecycle management
+
+## Troubleshooting Common Issues
+
+### Issue 1: Nodes Not Communicating
+**Symptoms**: Publisher and subscriber not connecting
+**Solutions**:
+1. Verify ROS 2 environment is sourced in all terminals
+2. Check that nodes are using the same domain ID
+3. Confirm topic names match exactly
+
+### Issue 2: Import Errors
+**Symptoms**: "ModuleNotFoundError: No module named 'rclpy'"
+**Solutions**:
+1. Source ROS 2 environment: `source /opt/ros/humble/setup.bash`
+2. Verify ROS 2 installation
+3. Check Python environment
+
+### Issue 3: Permission Errors
+**Symptoms**: Cannot execute Python files
+**Solutions**:
+1. Make files executable: `chmod +x filename.py`
+2. Check file permissions
+
+## Next Steps
+
+After successfully completing this module, students should be ready to proceed to:
+
+1. **Module 2: Digital Twin** - Learning about simulation environments
+2. **Module 3: AI-Brain** - Implementing perception and navigation
+3. **Module 4: Vision-Language-Action** - Developing LLM-driven robot behavior
+
+## Completion Verification
+
+To verify successful completion of this module, ensure you can:
+
+1. ✅ Run the hello world example and see messages
+2. ✅ Create and run custom publisher/subscriber nodes
+3. ✅ Implement a parameter-based node
+4. ✅ Run the joint control example
+5. ✅ Complete the assessment with working code examples
+6. ✅ Explain key ROS 2 concepts to another person
+
+## Additional Resources
+
+- [ROS 2 Tutorials](https://docs.ros.org/en/humble/Tutorials.html)
+- [rclpy Documentation](https://docs.ros.org/en/humble/p/rclpy/)
+- [ROS 2 Design Articles](https://design.ros2.org/)
+- Course discussion forum for questions

@@ -1,0 +1,1371 @@
+---
+sidebar_position: 1
+title: "Whisper Integration Implementation"
+---
+
+# Whisper Integration Implementation
+
+## Overview
+
+This section provides practical implementation examples for integrating OpenAI Whisper with robotic systems for voice command processing. These examples demonstrate how to capture, process, and interpret voice commands for robot control.
+
+## Whisper Setup and Installation
+
+### Installation
+
+First, install Whisper and related dependencies:
+
+```bash
+# Install Whisper
+pip install openai-whisper
+
+# Install additional dependencies for audio processing
+pip install sounddevice pyaudio numpy torch
+
+# For ROS 2 integration
+pip install rclpy std_msgs sensor_msgs
+```
+
+### Basic Whisper Usage
+
+```python
+import whisper
+
+# Load the model (this will download if not present)
+model = whisper.load_model("base")  # Options: tiny, base, small, medium, large
+
+# Transcribe audio file
+result = model.transcribe("audio_file.wav")
+print(result["text"])
+```
+
+## Real-Time Voice Command Processing
+
+### Basic Voice Command Node
+
+<CodeBlock title="voice_command_node.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Voice Command Node for the Physical AI & Humanoid Robotics Course
+This example demonstrates real-time voice command processing using Whisper.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
+import pyaudio
+import wave
+import numpy as np
+import whisper
+import threading
+import queue
+import time
+import json
+from typing import Dict, List, Optional
+
+
+class VoiceCommandNode(Node):
+    def __init__(self):
+        super().__init__('voice_command_node')
+
+        # Publishers
+        self.command_pub = self.create_publisher(String, '/voice_command', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.response_pub = self.create_publisher(String, '/voice_response', 10)
+
+        # Subscribers
+        self.laser_sub = self.create_subscription(
+            LaserScan, '/scan', self.scan_callback, 10
+        )
+
+        # Audio parameters
+        self.audio_format = pyaudio.paInt16
+        self.channels = 1
+        self.rate = 16000  # Whisper works well with 16kHz
+        self.chunk = 1024
+        self.record_seconds = 3
+        self.silence_threshold = 500  # Threshold for voice activity detection
+
+        # Whisper model
+        self.model = whisper.load_model("base")
+
+        # Command mappings
+        self.command_map = {
+            'move forward': self.move_forward,
+            'move backward': self.move_backward,
+            'turn left': self.turn_left,
+            'turn right': self.turn_right,
+            'stop': self.stop_robot,
+            'go to kitchen': self.go_to_kitchen,
+            'bring me coffee': self.bring_coffee,
+            'follow me': self.follow_me,
+            'return to base': self.return_to_base
+        }
+
+        # Audio processing state
+        self.audio_queue = queue.Queue()
+        self.recording = False
+        self.scan_data = None
+
+        # Start audio recording thread
+        self.audio_thread = threading.Thread(target=self.record_audio_continuously)
+        self.audio_thread.daemon = True
+        self.audio_thread.start()
+
+        # Timer for processing audio
+        self.process_timer = self.create_timer(5.0, self.process_audio)
+
+        self.get_logger().info('Voice Command Node initialized with Whisper')
+
+    def scan_callback(self, msg):
+        """Store laser scan data for context-aware commands."""
+        self.scan_data = msg
+
+    def record_audio_continuously(self):
+        """Continuously record audio and detect voice activity."""
+        p = pyaudio.PyAudio()
+
+        stream = p.open(
+            format=self.audio_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk
+        )
+
+        self.get_logger().info("Started audio recording thread")
+
+        while rclpy.ok():
+            try:
+                # Read audio data
+                data = stream.read(self.chunk, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
+
+                # Simple voice activity detection
+                if np.abs(audio_array).mean() > self.silence_threshold:
+                    # Accumulate audio for processing
+                    frames = [data]
+
+                    # Record for a few seconds
+                    for _ in range(0, int(self.rate / self.chunk * self.record_seconds)):
+                        data = stream.read(self.chunk, exception_on_overflow=False)
+                        frames.append(data)
+
+                    # Put audio data in queue for processing
+                    audio_data = b''.join(frames)
+                    self.audio_queue.put(audio_data)
+
+                    # Brief pause to avoid overlapping recordings
+                    time.sleep(1.0)
+            except Exception as e:
+                self.get_logger().error(f'Error in audio recording: {e}')
+                break
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    def process_audio(self):
+        """Process audio from the queue using Whisper."""
+        if not self.audio_queue.empty():
+            try:
+                audio_data = self.audio_queue.get_nowait()
+
+                # Save audio to temporary file for Whisper processing
+                temp_filename = f"/tmp/temp_voice_{int(time.time())}.wav"
+
+                with wave.open(temp_filename, 'wb') as wf:
+                    wf.setnchannels(self.channels)
+                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(self.audio_format))
+                    wf.setframerate(self.rate)
+                    wf.writeframes(audio_data)
+
+                # Transcribe using Whisper
+                result = self.model.transcribe(temp_filename)
+                transcribed_text = result["text"].strip().lower()
+
+                self.get_logger().info(f'Whisper transcribed: "{transcribed_text}"')
+
+                # Process the command
+                self.process_command(transcribed_text)
+
+                # Publish the recognized command
+                cmd_msg = String()
+                cmd_msg.data = f"RECOGNIZED: {transcribed_text}"
+                self.command_pub.publish(cmd_msg)
+
+                # Clean up temp file
+                import os
+                os.remove(temp_filename)
+
+            except queue.Empty:
+                pass
+            except Exception as e:
+                self.get_logger().error(f'Error processing audio: {e}')
+
+    def process_command(self, command_text: str):
+        """Process the recognized command text."""
+        # Simple command matching (in practice, you'd use more sophisticated NLP)
+        matched = False
+
+        for cmd_phrase, cmd_func in self.command_map.items():
+            if cmd_phrase in command_text:
+                self.get_logger().info(f'Matched command: {cmd_phrase}')
+                cmd_func()
+                matched = True
+
+                # Publish response
+                response_msg = String()
+                response_msg.data = f"EXECUTING: {cmd_phrase}"
+                self.response_pub.publish(response_msg)
+                break
+
+        if not matched:
+            self.get_logger().info(f'Unrecognized command: {command_text}')
+
+            # Publish unrecognized command
+            response_msg = String()
+            response_msg.data = f"UNRECOGNIZED: {command_text}"
+            self.response_pub.publish(response_msg)
+
+    def move_forward(self):
+        """Move robot forward."""
+        cmd = Twist()
+        cmd.linear.x = 0.3
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Moving forward')
+
+    def move_backward(self):
+        """Move robot backward."""
+        cmd = Twist()
+        cmd.linear.x = -0.3
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Moving backward')
+
+    def turn_left(self):
+        """Turn robot left."""
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.angular.z = 0.5
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Turning left')
+
+    def turn_right(self):
+        """Turn robot right."""
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.angular.z = -0.5
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Turning right')
+
+    def stop_robot(self):
+        """Stop robot motion."""
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Stopping robot')
+
+    def go_to_kitchen(self):
+        """Navigate to kitchen (placeholder for actual navigation)."""
+        # In a real implementation, this would trigger navigation to kitchen
+        self.get_logger().info('Navigating to kitchen (placeholder)')
+
+        # Publish navigation goal
+        goal_msg = String()
+        goal_msg.data = "NAVIGATE_TO:kitchen"
+        self.command_pub.publish(goal_msg)
+
+    def bring_coffee(self):
+        """Bring coffee (placeholder for complex task)."""
+        self.get_logger().info('Bringing coffee (placeholder for complex task)')
+
+        # This would involve multiple steps: navigate to kitchen, locate coffee,
+        # grasp coffee, return to user, etc.
+        task_sequence = [
+            "NAVIGATE_TO:kitchen",
+            "LOCATE_COFFEE",
+            "GRASP_COFFEE",
+            "NAVIGATE_TO:user",
+            "DELIVER_COFFEE"
+        ]
+
+        for task in task_sequence:
+            task_msg = String()
+            task_msg.data = task
+            self.command_pub.publish(task_msg)
+            time.sleep(2)  # Simulate task execution time
+
+    def follow_me(self):
+        """Follow the user (placeholder for tracking behavior)."""
+        self.get_logger().info('Following user (placeholder for tracking)')
+
+        # This would involve person detection and tracking
+        track_msg = String()
+        track_msg.data = "START_FOLLOWING:user"
+        self.command_pub.publish(track_msg)
+
+    def return_to_base(self):
+        """Return to charging/base station."""
+        self.get_logger().info('Returning to base station')
+
+        base_msg = String()
+        base_msg.data = "NAVIGATE_TO:base_station"
+        self.command_pub.publish(base_msg)
+
+
+def main(args=None):
+    """Main function to run the voice command node."""
+    rclpy.init(args=args)
+
+    voice_node = VoiceCommandNode()
+
+    try:
+        rclpy.spin(voice_node)
+    except KeyboardInterrupt:
+        voice_node.get_logger().info('Voice command node stopped by user')
+    finally:
+        voice_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Advanced Whisper Integration with Context
+
+### Context-Aware Command Processing
+
+<CodeBlock title="context_aware_voice.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Context-Aware Voice Command Processing
+This example demonstrates how to incorporate environmental context into voice command interpretation.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String, Float32
+from sensor_msgs.msg import LaserScan, Image
+from geometry_msgs.msg import Twist, PoseStamped
+from cv_bridge import CvBridge
+import whisper
+import pyaudio
+import numpy as np
+import threading
+import queue
+import time
+import math
+from typing import Dict, List, Optional
+
+
+class ContextAwareVoiceNode(Node):
+    def __init__(self):
+        super().__init__('context_aware_voice')
+
+        # Publishers and subscribers
+        self.voice_cmd_pub = self.create_publisher(String, '/processed_voice_command', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.nav_goal_pub = self.create_publisher(PoseStamped, '/goal_pose', 10)
+
+        self.scan_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, 10)
+        self.image_sub = self.create_subscription(Image, '/camera/rgb/image_raw', self.image_callback, 10)
+
+        # Audio and Whisper setup
+        self.audio_format = pyaudio.paInt16
+        self.channels = 1
+        self.rate = 16000
+        self.chunk = 1024
+        self.silence_threshold = 500
+
+        self.model = whisper.load_model("base")
+        self.audio_queue = queue.Queue()
+
+        # Context variables
+        self.scan_data = None
+        self.closest_obstacle_dist = float('inf')
+        self.environment_context = {
+            'room_type': 'unknown',
+            'obstacles': [],
+            'people_nearby': 0,
+            'lighting': 'normal'
+        }
+
+        # CV Bridge for image processing
+        self.cv_bridge = CvBridge()
+
+        # Start audio processing
+        self.audio_thread = threading.Thread(target=self.record_audio_continuously)
+        self.audio_thread.daemon = True
+        self.audio_thread.start()
+
+        self.process_timer = self.create_timer(4.0, self.process_audio_with_context)
+
+        self.get_logger().info('Context-Aware Voice Command Node initialized')
+
+    def scan_callback(self, msg):
+        """Process laser scan data for context."""
+        self.scan_data = msg
+
+        # Calculate closest obstacle
+        if msg.ranges:
+            valid_ranges = [r for r in msg.ranges if r > 0 and r < float('inf')]
+            if valid_ranges:
+                self.closest_obstacle_dist = min(valid_ranges)
+
+        # Update environment context based on scan
+        self.update_environment_context()
+
+    def image_callback(self, msg):
+        """Process camera image for visual context."""
+        try:
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            # Simple analysis - in practice, you'd use object detection
+            height, width = cv_image.shape[:2]
+
+            # Analyze lighting conditions (simplified)
+            avg_brightness = np.mean(cv_image)
+            if avg_brightness < 50:
+                self.environment_context['lighting'] = 'dark'
+            elif avg_brightness > 200:
+                self.environment_context['lighting'] = 'bright'
+            else:
+                self.environment_context['lighting'] = 'normal'
+
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+
+    def update_environment_context(self):
+        """Update environment context based on sensor data."""
+        if self.scan_data:
+            # Analyze room layout
+            front_ranges = self.scan_data.ranges[len(self.scan_data.ranges)//2-30:len(self.scan_data.ranges)//2+30]
+            left_ranges = self.scan_data.ranges[:len(self.scan_data.ranges)//4]
+            right_ranges = self.scan_data.ranges[3*len(self.scan_data.ranges)//4:]
+
+            # Determine if in corridor or room
+            front_clear = all(r > 1.0 for r in front_ranges if r > 0 and r < float('inf'))
+            sides_open = (any(r > 2.0 for r in left_ranges if r > 0 and r < float('inf')) and
+                         any(r > 2.0 for r in right_ranges if r > 0 and r < float('inf')))
+
+            if front_clear and sides_open:
+                self.environment_context['room_type'] = 'corridor'
+            else:
+                self.environment_context['room_type'] = 'room'
+
+    def record_audio_continuously(self):
+        """Continuously record audio with voice activity detection."""
+        p = pyaudio.PyAudio()
+
+        stream = p.open(
+            format=self.audio_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk
+        )
+
+        while rclpy.ok():
+            try:
+                data = stream.read(self.chunk, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
+
+                # Voice activity detection
+                if np.abs(audio_array).mean() > self.silence_threshold:
+                    # Record a longer segment
+                    frames = [data]
+                    for _ in range(0, int(self.rate / self.chunk * 2)):  # 2 seconds
+                        data = stream.read(self.chunk, exception_on_overflow=False)
+                        frames.append(data)
+
+                    audio_data = b''.join(frames)
+                    self.audio_queue.put(audio_data)
+
+                    time.sleep(0.5)  # Brief pause
+            except Exception as e:
+                self.get_logger().error(f'Audio recording error: {e}')
+                break
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    def process_audio_with_context(self):
+        """Process audio using Whisper with environmental context."""
+        if not self.audio_queue.empty():
+            try:
+                audio_data = self.audio_queue.get_nowait()
+
+                # Save to temp file
+                temp_filename = f"/tmp/context_voice_{int(time.time())}.wav"
+                with wave.open(temp_filename, 'wb') as wf:
+                    wf.setnchannels(self.channels)
+                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(self.audio_format))
+                    wf.setframerate(self.rate)
+                    wf.writeframes(audio_data)
+
+                # Transcribe with Whisper
+                result = self.model.transcribe(temp_filename)
+                transcribed_text = result["text"].strip().lower()
+
+                self.get_logger().info(f'Transcribed: "{transcribed_text}"')
+                self.get_logger().info(f'Context: {self.environment_context}')
+
+                # Process with context
+                self.interpret_command_with_context(transcribed_text)
+
+                import os
+                os.remove(temp_filename)
+
+            except queue.Empty:
+                pass
+            except Exception as e:
+                self.get_logger().error(f'Error in context-aware processing: {e}')
+
+    def interpret_command_with_context(self, command_text: str):
+        """Interpret command using environmental context."""
+        # Example: Modify behavior based on context
+        if 'move' in command_text or 'go' in command_text:
+            # Check if path is clear before moving
+            if self.closest_obstacle_dist < 0.5:  # Less than 0.5m in front
+                self.get_logger().warn('Path blocked! Cannot execute movement command.')
+
+                # Publish warning
+                warning_msg = String()
+                warning_msg.data = f"BLOCKED_PATH:obstacle_at_{self.closest_obstacle_dist:.2f}m"
+                self.voice_cmd_pub.publish(warning_msg)
+                return
+
+        # Example: Adjust behavior based on lighting
+        if self.environment_context['lighting'] == 'dark':
+            if 'move' in command_text:
+                # Move more slowly in dark conditions
+                self.get_logger().info('Moving slowly due to dark lighting')
+                # Implement slower movement logic here
+
+        # Example: Adjust based on room type
+        if self.environment_context['room_type'] == 'corridor':
+            if 'turn' in command_text:
+                # Be more careful when turning in corridors
+                self.get_logger().info('Being cautious in corridor environment')
+
+        # Process the command normally
+        self.process_voice_command(command_text)
+
+    def process_voice_command(self, command_text: str):
+        """Process the voice command."""
+        # Simplified command processing
+        if 'forward' in command_text or 'ahead' in command_text:
+            cmd = Twist()
+            cmd.linear.x = 0.3
+            self.cmd_vel_pub.publish(cmd)
+        elif 'backward' in command_text or 'back' in command_text:
+            cmd = Twist()
+            cmd.linear.x = -0.3
+            self.cmd_vel_pub.publish(cmd)
+        elif 'left' in command_text:
+            cmd = Twist()
+            cmd.angular.z = 0.5
+            self.cmd_vel_pub.publish(cmd)
+        elif 'right' in command_text:
+            cmd = Twist()
+            cmd.angular.z = -0.5
+            self.cmd_vel_pub.publish(cmd)
+        elif 'stop' in command_text:
+            cmd = Twist()
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.0
+            self.cmd_vel_pub.publish(cmd)
+
+        # Publish processed command
+        proc_cmd_msg = String()
+        proc_cmd_msg.data = f"PROCESSED_WITH_CONTEXT: {command_text}"
+        self.voice_cmd_pub.publish(proc_cmd_msg)
+
+        self.get_logger().info(f'Processed command with context: {command_text}')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    context_node = ContextAwareVoiceNode()
+
+    try:
+        rclpy.spin(context_node)
+    except KeyboardInterrupt:
+        context_node.get_logger().info('Context-aware voice node stopped')
+    finally:
+        context_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Whisper with ROS 2 Actions
+
+### Voice Command Action Server
+
+<CodeBlock title="voice_command_action.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Voice Command Action Server
+This example demonstrates using Whisper with ROS 2 actions for complex voice-controlled tasks.
+"""
+
+import rclpy
+from rclpy.action import ActionServer, CancelResponse, GoalResponse
+from rclpy.node import Node
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+
+from vla_interfaces.action import VoiceCommand  # Custom action interface
+from geometry_msgs.msg import Twist, Pose
+from std_msgs.msg import String
+
+import whisper
+import pyaudio
+import numpy as np
+import wave
+import threading
+import queue
+import time
+from enum import Enum
+
+
+class VoiceCommandStatus(Enum):
+    IDLE = 1
+    LISTENING = 2
+    PROCESSING = 3
+    EXECUTING = 4
+    COMPLETED = 5
+    FAILED = 6
+
+
+class VoiceCommandActionServer(Node):
+    def __init__(self):
+        super().__init__('voice_command_action_server')
+
+        # Initialize Whisper model
+        self.model = whisper.load_model("base")
+
+        # Audio parameters
+        self.audio_format = pyaudio.paInt16
+        self.channels = 1
+        self.rate = 16000
+        self.chunk = 1024
+        self.silence_threshold = 500
+
+        # State management
+        self.current_status = VoiceCommandStatus.IDLE
+        self.audio_queue = queue.Queue()
+        self.is_listening = False
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.status_pub = self.create_publisher(String, '/voice_status', 10)
+
+        # Action server
+        self._action_server = ActionServer(
+            self,
+            VoiceCommand,
+            'voice_command',
+            execute_callback=self.execute_callback,
+            callback_group=ReentrantCallbackGroup(),
+            goal_callback=self.goal_callback,
+            cancel_callback=self.cancel_callback
+        )
+
+        # Start audio listening thread
+        self.audio_thread = threading.Thread(target=self.listen_for_voice)
+        self.audio_thread.daemon = True
+        self.audio_thread.start()
+
+        self.get_logger().info('Voice Command Action Server initialized')
+
+    def goal_callback(self, goal_request):
+        """Accept or reject goal requests."""
+        self.get_logger().info(f'Received voice command goal: {goal_request.command}')
+
+        # Accept all goals for now
+        return GoalResponse.ACCEPT
+
+    def cancel_callback(self, goal_handle):
+        """Accept or reject cancel requests."""
+        self.get_logger().info('Received cancel request')
+        return CancelResponse.ACCEPT
+
+    def listen_for_voice(self):
+        """Listen for voice commands in a separate thread."""
+        p = pyaudio.PyAudio()
+
+        stream = p.open(
+            format=self.audio_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk
+        )
+
+        self.get_logger().info('Voice listening thread started')
+
+        while rclpy.ok() and self.is_listening:
+            try:
+                data = stream.read(self.chunk, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
+
+                if np.abs(audio_array).mean() > self.silence_threshold:
+                    # Record a segment
+                    frames = [data]
+                    for _ in range(0, int(self.rate / self.chunk * 3)):  # 3 seconds
+                        data = stream.read(self.chunk, exception_on_overflow=False)
+                        frames.append(data)
+
+                    audio_data = b''.join(frames)
+                    self.audio_queue.put(audio_data)
+
+                    # Update status
+                    status_msg = String()
+                    status_msg.data = "VOICE_DETECTED"
+                    self.status_pub.publish(status_msg)
+
+                    time.sleep(1.0)
+            except Exception as e:
+                self.get_logger().error(f'Error in voice listening: {e}')
+                break
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    async def execute_callback(self, goal_handle):
+        """Execute the voice command goal."""
+        self.get_logger().info('Executing voice command goal')
+
+        feedback_msg = VoiceCommand.Feedback()
+        result_msg = VoiceCommand.Result()
+
+        # Update status
+        self.current_status = VoiceCommandStatus.PROCESSING
+        status_msg = String()
+        status_msg.data = "PROCESSING_VOICE_COMMAND"
+        self.status_pub.publish(status_msg)
+
+        try:
+            # Process the voice command
+            if goal_handle.request.command_type == "SPEECH_RECOGNITION":
+                # Process speech from audio queue
+                command_text = await self.process_speech_recognition()
+            else:
+                # Use the provided text command
+                command_text = goal_handle.request.command
+
+            if command_text:
+                feedback_msg.current_command = command_text
+                goal_handle.publish_feedback(feedback_msg)
+
+                # Interpret and execute the command
+                success = self.execute_interpreted_command(command_text)
+
+                if success:
+                    result_msg.success = True
+                    result_msg.message = f"Successfully executed: {command_text}"
+                    goal_handle.succeed()
+                else:
+                    result_msg.success = False
+                    result_msg.message = f"Failed to execute: {command_text}"
+                    goal_handle.abort()
+            else:
+                result_msg.success = False
+                result_msg.message = "No command recognized"
+                goal_handle.abort()
+
+        except Exception as e:
+            self.get_logger().error(f'Error executing voice command: {e}')
+            result_msg.success = False
+            result_msg.message = f"Execution error: {str(e)}"
+            goal_handle.abort()
+
+        return result_msg
+
+    async def process_speech_recognition(self):
+        """Process speech recognition using Whisper."""
+        if not self.audio_queue.empty():
+            try:
+                audio_data = self.audio_queue.get_nowait()
+
+                # Save to temp file
+                temp_filename = f"/tmp/action_voice_{int(time.time())}.wav"
+                with wave.open(temp_filename, 'wb') as wf:
+                    wf.setnchannels(self.channels)
+                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(self.audio_format))
+                    wf.setframerate(self.rate)
+                    wf.writeframes(audio_data)
+
+                # Transcribe with Whisper
+                result = self.model.transcribe(temp_filename)
+                transcribed_text = result["text"].strip()
+
+                # Clean up
+                import os
+                os.remove(temp_filename)
+
+                return transcribed_text.lower()
+            except queue.Empty:
+                return None
+            except Exception as e:
+                self.get_logger().error(f'Error in speech recognition: {e}')
+                return None
+        return None
+
+    def execute_interpreted_command(self, command_text: str) -> bool:
+        """Execute the interpreted voice command."""
+        self.current_status = VoiceCommandStatus.EXECUTING
+
+        # Update status
+        status_msg = String()
+        status_msg.data = f"EXECUTING:{command_text}"
+        self.status_pub.publish(status_msg)
+
+        # Simple command mapping
+        if 'move forward' in command_text or 'go forward' in command_text:
+            cmd = Twist()
+            cmd.linear.x = 0.3
+            cmd.angular.z = 0.0
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(2)  # Simulate execution time
+            self.stop_robot()
+        elif 'move backward' in command_text:
+            cmd = Twist()
+            cmd.linear.x = -0.3
+            cmd.angular.z = 0.0
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(2)
+            self.stop_robot()
+        elif 'turn left' in command_text:
+            cmd = Twist()
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.5
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(1)
+            self.stop_robot()
+        elif 'turn right' in command_text:
+            cmd = Twist()
+            cmd.linear.x = 0.0
+            cmd.angular.z = -0.5
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(1)
+            self.stop_robot()
+        elif 'stop' in command_text:
+            self.stop_robot()
+        else:
+            # Unknown command
+            self.get_logger().info(f'Unknown command: {command_text}')
+            return False
+
+        self.current_status = VoiceCommandStatus.COMPLETED
+        return True
+
+    def stop_robot(self):
+        """Stop the robot."""
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    action_server = VoiceCommandActionServer()
+
+    try:
+        executor = MultiThreadedExecutor()
+        rclpy.spin(action_server, executor=executor)
+    except KeyboardInterrupt:
+        action_server.get_logger().info('Action server stopped by user')
+    finally:
+        action_server.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Performance Optimization
+
+### Optimized Whisper Processing
+
+<CodeBlock title="optimized_whisper.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Optimized Whisper Processing for Robotics
+This example shows how to optimize Whisper for real-time robotic applications.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+import whisper
+import pyaudio
+import numpy as np
+import threading
+import queue
+import time
+import torch
+from collections import deque
+from typing import Deque
+
+
+class OptimizedWhisperNode(Node):
+    def __init__(self):
+        super().__init__('optimized_whisper_node')
+
+        # Publishers
+        self.transcription_pub = self.create_publisher(String, '/optimized_transcription', 10)
+
+        # Audio parameters
+        self.audio_format = pyaudio.paInt16
+        self.channels = 1
+        self.rate = 16000
+        self.chunk = 1024
+        self.silence_threshold = 500
+
+        # Optimized Whisper model (use smaller model for better performance)
+        self.model = whisper.load_model("tiny").to(self.get_device())
+
+        # Audio buffers for streaming
+        self.audio_buffer = deque(maxlen=int(self.rate * 30))  # 30 seconds buffer
+        self.process_queue = queue.Queue()
+
+        # Processing state
+        self.is_processing = False
+        self.last_process_time = 0
+        self.process_interval = 2.0  # Process every 2 seconds
+
+        # Audio stream
+        self.audio = pyaudio.PyAudio()
+        self.stream = self.audio.open(
+            format=self.audio_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk
+        )
+
+        # Start processing threads
+        self.capture_thread = threading.Thread(target=self.capture_audio)
+        self.processing_thread = threading.Thread(target=self.process_audio_optimized)
+
+        self.capture_thread.daemon = True
+        self.processing_thread.daemon = True
+
+        self.capture_thread.start()
+        self.processing_thread.start()
+
+        self.get_logger().info('Optimized Whisper Node initialized')
+
+    def get_device(self):
+        """Get the best available device for processing."""
+        if torch.cuda.is_available():
+            return torch.device("cuda")
+        else:
+            return torch.device("cpu")
+
+    def capture_audio(self):
+        """Capture audio in a separate thread."""
+        while rclpy.ok():
+            try:
+                data = self.stream.read(self.chunk, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
+
+                # Add to buffer
+                for sample in audio_array:
+                    self.audio_buffer.append(sample)
+
+                # Check for voice activity
+                if np.abs(audio_array).mean() > self.silence_threshold:
+                    # Trigger processing
+                    current_time = time.time()
+                    if current_time - self.last_process_time > self.process_interval:
+                        self.last_process_time = current_time
+
+                        # Extract recent audio segment
+                        recent_samples = list(self.audio_buffer)[-int(self.rate * 4):]  # 4 seconds
+                        if len(recent_samples) > self.rate:  # At least 1 second
+                            audio_segment = np.array(recent_samples, dtype=np.float32)
+                            self.process_queue.put(audio_segment)
+
+            except Exception as e:
+                self.get_logger().error(f'Error in audio capture: {e}')
+                time.sleep(0.1)  # Brief pause on error
+
+    def process_audio_optimized(self):
+        """Process audio with optimized Whisper."""
+        while rclpy.ok():
+            try:
+                # Get audio from queue
+                if not self.process_queue.empty():
+                    audio_segment = self.process_queue.get_nowait()
+
+                    # Normalize audio
+                    audio_normalized = audio_segment / np.max(np.abs(audio_segment))
+
+                    # Process with Whisper
+                    result = self.model.transcribe(
+                        audio_normalized,
+                        fp16=torch.cuda.is_available(),  # Use fp16 on GPU for speed
+                        language='en',
+                        task='transcribe'
+                    )
+
+                    transcribed_text = result["text"].strip()
+
+                    if transcribed_text:  # Only publish if there's text
+                        self.get_logger().info(f'Optimized transcription: "{transcribed_text}"')
+
+                        # Publish result
+                        msg = String()
+                        msg.data = transcribed_text
+                        self.transcription_pub.publish(msg)
+
+            except queue.Empty:
+                time.sleep(0.01)  # Brief pause when queue is empty
+            except Exception as e:
+                self.get_logger().error(f'Error in optimized processing: {e}')
+                time.sleep(0.1)
+
+    def destroy_node(self):
+        """Cleanup resources."""
+        self.stream.stop_stream()
+        self.stream.close()
+        self.audio.terminate()
+        super().destroy_node()
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    opt_node = OptimizedWhisperNode()
+
+    try:
+        rclpy.spin(opt_node)
+    except KeyboardInterrupt:
+        opt_node.get_logger().info('Optimized Whisper node stopped by user')
+    finally:
+        opt_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Integration with LLM for Command Interpretation
+
+### Whisper + LLM Pipeline
+
+<CodeBlock title="whisper_llm_pipeline.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Whisper + LLM Pipeline for Advanced Voice Command Processing
+This example demonstrates combining Whisper with an LLM for sophisticated command interpretation.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+import whisper
+import pyaudio
+import numpy as np
+import wave
+import threading
+import queue
+import time
+import openai
+import json
+from typing import Dict, Any
+
+
+class WhisperLLMPipeline(Node):
+    def __init__(self):
+        super().__init__('whisper_llm_pipeline')
+
+        # Publishers
+        self.interpreted_cmd_pub = self.create_publisher(String, '/interpreted_command', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # Audio parameters
+        self.audio_format = pyaudio.paInt16
+        self.channels = 1
+        self.rate = 16000
+        self.chunk = 1024
+        self.silence_threshold = 500
+
+        # Models
+        self.whisper_model = whisper.load_model("base")
+
+        # OpenAI API configuration (in practice, you'd use environment variables)
+        # openai.api_key = "your-api-key-here"  # Don't hardcode API keys
+
+        # Audio processing
+        self.audio_queue = queue.Queue()
+        self.context_history = []  # Keep track of conversation context
+
+        # Start audio processing
+        self.audio_thread = threading.Thread(target=self.record_audio_continuously)
+        self.audio_thread.daemon = True
+        self.audio_thread.start()
+
+        self.process_timer = self.create_timer(5.0, self.process_with_llm)
+
+        self.get_logger().info('Whisper + LLM Pipeline initialized')
+
+    def record_audio_continuously(self):
+        """Continuously record audio with voice activity detection."""
+        p = pyaudio.PyAudio()
+
+        stream = p.open(
+            format=self.audio_format,
+            channels=self.channels,
+            rate=self.rate,
+            input=True,
+            frames_per_buffer=self.chunk
+        )
+
+        while rclpy.ok():
+            try:
+                data = stream.read(self.chunk, exception_on_overflow=False)
+                audio_array = np.frombuffer(data, dtype=np.int16)
+
+                if np.abs(audio_array).mean() > self.silence_threshold:
+                    # Record a segment
+                    frames = [data]
+                    for _ in range(0, int(self.rate / self.chunk * 3)):  # 3 seconds
+                        data = stream.read(self.chunk, exception_on_overflow=False)
+                        frames.append(data)
+
+                    audio_data = b''.join(frames)
+                    self.audio_queue.put(audio_data)
+
+                    time.sleep(1.0)
+            except Exception as e:
+                self.get_logger().error(f'Audio recording error: {e}')
+                break
+
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+    def process_with_llm(self):
+        """Process audio with Whisper + LLM interpretation."""
+        if not self.audio_queue.empty():
+            try:
+                audio_data = self.audio_queue.get_nowait()
+
+                # Transcribe with Whisper
+                temp_filename = f"/tmp/llm_voice_{int(time.time())}.wav"
+                with wave.open(temp_filename, 'wb') as wf:
+                    wf.setnchannels(self.channels)
+                    wf.setsampwidth(pyaudio.PyAudio().get_sample_size(self.audio_format))
+                    wf.setframerate(self.rate)
+                    wf.writeframes(audio_data)
+
+                result = self.whisper_model.transcribe(temp_filename)
+                transcribed_text = result["text"].strip()
+
+                self.get_logger().info(f'Whisper transcribed: "{transcribed_text}"')
+
+                # Interpret with LLM
+                interpreted_command = self.interpret_with_llm(transcribed_text)
+
+                if interpreted_command:
+                    self.get_logger().info(f'LLM interpreted: {interpreted_command}')
+
+                    # Publish interpreted command
+                    cmd_msg = String()
+                    cmd_msg.data = json.dumps(interpreted_command)
+                    self.interpreted_cmd_pub.publish(cmd_msg)
+
+                    # Execute the command
+                    self.execute_parsed_command(interpreted_command)
+
+                import os
+                os.remove(temp_filename)
+
+            except queue.Empty:
+                pass
+            except Exception as e:
+                self.get_logger().error(f'Error in LLM processing: {e}')
+
+    def interpret_with_llm(self, transcribed_text: str) -> Dict[str, Any]:
+        """Use LLM to interpret the transcribed text into a structured command."""
+        # In a real implementation, you would call an LLM API
+        # For this example, we'll simulate the LLM response
+
+        # This is a simplified example - in practice, you'd use a real LLM call
+        llm_prompt = f"""
+        You are a command interpreter for a household robot.
+        Convert the following user command into a structured JSON format:
+
+        User command: "{transcribed_text}"
+
+        Respond with a JSON object with these fields:
+        - "intent": The main action (move_to_location, manipulate_object, etc.)
+        - "location": Target location if applicable
+        - "object": Target object if applicable
+        - "action": Specific action to perform
+        - "parameters": Additional parameters
+
+        Example response:
+        {{
+            "intent": "move_to_location",
+            "location": "kitchen",
+            "object": null,
+            "action": "navigate",
+            "parameters": {{"speed": "moderate"}}
+        }}
+        """
+
+        # Simulated LLM response (in real implementation, call actual LLM)
+        # For demonstration purposes, we'll create a simple mapping
+        command_mappings = {
+            "move forward": {
+                "intent": "move",
+                "action": "forward",
+                "parameters": {"distance": 1.0, "speed": 0.3}
+            },
+            "move backward": {
+                "intent": "move",
+                "action": "backward",
+                "parameters": {"distance": 1.0, "speed": 0.3}
+            },
+            "turn left": {
+                "intent": "rotate",
+                "action": "left",
+                "parameters": {"angle": 90, "speed": 0.5}
+            },
+            "turn right": {
+                "intent": "rotate",
+                "action": "right",
+                "parameters": {"angle": 90, "speed": 0.5}
+            },
+            "go to kitchen": {
+                "intent": "navigate",
+                "location": "kitchen",
+                "action": "move_to",
+                "parameters": {"speed": "moderate"}
+            },
+            "stop": {
+                "intent": "stop",
+                "action": "halt",
+                "parameters": {}
+            }
+        }
+
+        # Find best matching command
+        transcribed_lower = transcribed_text.lower()
+        for cmd_phrase, cmd_struct in command_mappings.items():
+            if cmd_phrase in transcribed_lower:
+                return cmd_struct
+
+        # If no match, return a generic response
+        return {
+            "intent": "unknown",
+            "action": "unknown",
+            "parameters": {"original_text": transcribed_text}
+        }
+
+    def execute_parsed_command(self, parsed_command: Dict[str, Any]):
+        """Execute the parsed command."""
+        intent = parsed_command.get("intent")
+        action = parsed_command.get("action")
+        params = parsed_command.get("parameters", {})
+
+        if intent == "move" and action == "forward":
+            cmd = Twist()
+            cmd.linear.x = params.get("speed", 0.3)
+            self.cmd_vel_pub.publish(cmd)
+        elif intent == "move" and action == "backward":
+            cmd = Twist()
+            cmd.linear.x = -params.get("speed", 0.3)
+            self.cmd_vel_pub.publish(cmd)
+        elif intent == "rotate" and action == "left":
+            cmd = Twist()
+            cmd.angular.z = params.get("speed", 0.5)
+            self.cmd_vel_pub.publish(cmd)
+        elif intent == "rotate" and action == "right":
+            cmd = Twist()
+            cmd.angular.z = -params.get("speed", 0.5)
+            self.cmd_vel_pub.publish(cmd)
+        elif intent == "stop" or action == "halt":
+            cmd = Twist()
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.0
+            self.cmd_vel_pub.publish(cmd)
+        else:
+            self.get_logger().info(f'Command not executed: {parsed_command}')
+
+        # Add to context history
+        self.context_history.append({
+            "command": parsed_command,
+            "timestamp": time.time()
+        })
+
+        # Keep only recent history
+        self.context_history = self.context_history[-10:]  # Keep last 10 commands
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    pipeline = WhisperLLMPipeline()
+
+    try:
+        rclpy.spin(pipeline)
+    except KeyboardInterrupt:
+        pipeline.get_logger().info('Whisper+LLM pipeline stopped by user')
+    finally:
+        pipeline.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Summary
+
+These implementation examples demonstrate various approaches to integrating Whisper with robotic systems:
+
+1. **Basic Voice Command Node**: Simple voice recognition and command execution
+2. **Context-Aware Processing**: Incorporating environmental context into command interpretation
+3. **Action Server Integration**: Using ROS 2 actions for complex voice-controlled tasks
+4. **Optimized Processing**: Performance optimizations for real-time applications
+5. **LLM Integration**: Combining Whisper with LLMs for sophisticated command interpretation
+
+Each approach has trade-offs in terms of complexity, performance, and capability. Choose the approach that best fits your specific robotic application requirements.

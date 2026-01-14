@@ -1,0 +1,429 @@
+---
+sidebar_position: 1
+title: "Physics Simulation Exercises"
+---
+
+# Physics Simulation Exercises
+
+## Exercise 1: Basic Gazebo World Creation
+
+### Objective
+Create a custom Gazebo world with multiple objects and environmental features.
+
+### Requirements
+- Create a world file in SDF format
+- Include at least 3 different geometric shapes (box, cylinder, sphere)
+- Add a textured ground plane
+- Include proper lighting (sun or lamp)
+- Add a static obstacle in the center of the world
+
+### Steps
+1. Create a new world file: `custom_world.sdf`
+2. Define the world with a name and include standard models
+3. Add geometric objects with different sizes and positions
+4. Configure physics parameters
+5. Test the world in Gazebo
+
+### Verification
+```bash
+# Test your world
+ign gazebo path/to/your/custom_world.sdf
+```
+
+### Solution Template
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="custom_world">
+    <!-- Include standard models -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Physics engine -->
+    <physics name="default_physics" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Add your custom objects here -->
+    <!-- Box object -->
+    <model name="box_object">
+      <pose>1 1 0.5 0 0 0</pose>
+      <link name="box_link">
+        <!-- Add geometry, visuals, and inertial properties -->
+      </link>
+    </model>
+
+    <!-- Cylinder object -->
+    <model name="cylinder_object">
+      <pose>-1 1 0.5 0 0 0</pose>
+      <!-- Add model definition -->
+    </model>
+
+    <!-- Sphere object -->
+    <model name="sphere_object">
+      <pose>0 -1 0.5 0 0 0</pose>
+      <!-- Add model definition -->
+    </model>
+  </world>
+</sdf>
+```
+
+## Exercise 2: Robot Model in Custom Environment
+
+### Objective
+Create a simple robot model and place it in your custom world.
+
+### Requirements
+- Create a differential drive robot with 2 wheels
+- Include a chassis with basic dimensions
+- Add collision and visual properties
+- Ensure the robot is properly configured for Gazebo
+- Place the robot in your custom world
+
+### Steps
+1. Create a robot model file: `simple_robot.sdf`
+2. Define the chassis link with appropriate size and mass
+3. Add left and right wheels as separate links
+4. Create joints connecting wheels to chassis
+5. Include Gazebo plugins for ROS control
+6. Add the robot to your world file
+
+### Verification
+```bash
+# Launch the world with your robot
+ign gazebo path/to/your/custom_world.sdf
+
+# Check that the robot appears and has proper physics properties
+ign topic -t /world/custom_world/model/simple_robot/pose/info -e
+```
+
+### Solution Template
+```xml
+<!-- In your robot file -->
+<model name="simple_robot">
+  <link name="chassis">
+    <pose>0 0 0.1 0 0 0</pose>
+    <collision name="collision">
+      <geometry>
+        <box><size>0.5 0.3 0.2</size></box>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <geometry>
+        <box><size>0.5 0.3 0.2</size></box>
+      </geometry>
+      <material>
+        <ambient>0.8 0.8 0.8 1</ambient>
+        <diffuse>0.8 0.8 0.8 1</diffuse>
+      </material>
+    </visual>
+    <inertial>
+      <mass>5.0</mass>
+      <inertia>
+        <ixx>0.1</ixx>
+        <iyy>0.2</iyy>
+        <izz>0.3</izz>
+      </inertia>
+    </inertial>
+  </link>
+
+  <link name="left_wheel">
+    <collision name="collision">
+      <geometry>
+        <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+      </geometry>
+    </collision>
+    <visual name="visual">
+      <geometry>
+        <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+      </geometry>
+    </visual>
+    <inertial>
+      <mass>0.5</mass>
+      <inertia>
+        <ixx>0.001</ixx>
+        <iyy>0.001</iyy>
+        <izz>0.002</izz>
+      </inertia>
+    </inertial>
+  </link>
+
+  <joint name="left_wheel_joint" type="revolute">
+    <parent>chassis</parent>
+    <child>left_wheel</child>
+    <pose>-0.2 -0.2 0 0 1.5708 0</pose>
+    <axis><xyz>0 0 1</xyz></axis>
+  </joint>
+
+  <!-- Add right wheel similarly -->
+</model>
+```
+
+## Exercise 3: Sensor Integration
+
+### Objective
+Add a camera sensor to your robot and visualize the sensor output.
+
+### Requirements
+- Add a RGB camera sensor to your robot
+- Configure camera parameters (resolution, FOV, etc.)
+- Verify the camera topic is published
+- Visualize the camera feed in RViz or save images
+
+### Steps
+1. Add a camera sensor to your robot model
+2. Configure the camera properties
+3. Launch the simulation
+4. Verify the camera topic is available
+5. Subscribe to the camera topic to view images
+
+### Verification
+```bash
+# Check available topics
+ign topic -l | grep camera
+
+# Echo camera info
+ign topic -t /world/custom_world/model/simple_robot/sensor/camera/pose/info -e
+
+# If using ROS bridge:
+rostopic list | grep camera
+rostopic echo /simple_robot/camera/image_raw
+```
+
+### Solution Template
+```xml
+<sensor name="camera" type="camera">
+  <pose>0.3 0 0.2 0 0 0</pose>
+  <camera name="rgb_camera">
+    <horizontal_fov>1.047</horizontal_fov>
+    <image>
+      <width>640</width>
+      <height>480</height>
+      <format>R8G8B8</format>
+    </image>
+    <clip>
+      <near>0.1</near>
+      <far>10</far>
+    </clip>
+  </camera>
+  <always_on>1</always_on>
+  <update_rate>30</update_rate>
+</sensor>
+```
+
+## Exercise 4: LIDAR Sensor Implementation
+
+### Objective
+Add a LIDAR sensor to your robot and process the range data.
+
+### Requirements
+- Add a LIDAR (ray) sensor to your robot
+- Configure LIDAR parameters (sample count, range, resolution)
+- Verify the LIDAR topic publishes data
+- Create a simple obstacle avoidance algorithm
+
+### Steps
+1. Add a ray sensor (LIDAR) to your robot
+2. Configure the scan parameters
+3. Test the simulation and verify LIDAR data
+4. Implement a basic obstacle avoidance algorithm
+
+### Verification
+```bash
+# Check LIDAR topic
+ign topic -t /world/custom_world/model/simple_robot/sensor/lidar/scan/points -e
+
+# Process LIDAR data
+# Create a script to read and interpret the range data
+```
+
+### Solution Template
+```xml
+<sensor name="lidar" type="ray">
+  <pose>0.3 0 0.3 0 0 0</pose>
+  <ray>
+    <scan>
+      <horizontal>
+        <samples>360</samples>
+        <resolution>1</resolution>
+        <min_angle>-3.14159</min_angle>
+        <max_angle>3.14159</max_angle>
+      </horizontal>
+    </scan>
+    <range>
+      <min>0.1</min>
+      <max>10</max>
+      <resolution>0.01</resolution>
+    </range>
+  </ray>
+  <always_on>1</always_on>
+  <update_rate>10</update_rate>
+</sensor>
+```
+
+## Exercise 5: Physics Property Tuning
+
+### Objective
+Experiment with different physics properties to achieve desired robot behavior.
+
+### Requirements
+- Adjust friction coefficients for wheels
+- Modify damping parameters
+- Tune mass and inertia properties
+- Observe and document the effects of changes
+
+### Steps
+1. Modify the friction properties of your robot wheels
+2. Change damping parameters for smoother motion
+3. Adjust mass distribution and inertia tensors
+4. Document how each change affects robot behavior
+
+### Verification
+```bash
+# Launch simulation and observe behavior
+ign gazebo your_world.sdf
+
+# Compare robot movement with different physics parameters
+# Record observations about speed, stability, and control
+```
+
+## Exercise 6: Joint Control Implementation
+
+### Objective
+Implement joint control for your robot's wheels using Gazebo plugins.
+
+### Requirements
+- Add ROS control plugins to your robot
+- Create joint controllers for wheel movement
+- Implement velocity control for differential drive
+- Test robot movement in the environment
+
+### Steps
+1. Add the ROS control plugin to your robot
+2. Configure joint properties for control
+3. Implement a simple controller
+4. Test robot movement in simulation
+
+### Verification
+```bash
+# Publish velocity commands
+rostopic pub /simple_robot/cmd_vel geometry_msgs/Twist "linear:
+  x: 1.0
+  y: 0.0
+  z: 0.0
+angular:
+  x: 0.0
+  y: 0.0
+  z: 0.5"
+
+# Monitor robot movement in Gazebo
+```
+
+## Exercise 7: Environment Interaction
+
+### Objective
+Create an environment where your robot interacts with objects.
+
+### Requirements
+- Add movable objects to your world
+- Configure object physics properties
+- Implement robot-object interaction
+- Create a simple task (pushing an object, navigating around obstacles)
+
+### Steps
+1. Add dynamic objects to your world
+2. Configure appropriate physics properties
+3. Implement robot behaviors to interact with objects
+4. Test the interaction in simulation
+
+### Verification
+```bash
+# Launch the simulation
+ign gazebo interactive_world.sdf
+
+# Control the robot to interact with objects
+# Observe realistic physics interactions
+```
+
+## Exercise 8: Performance Optimization
+
+### Objective
+Optimize your simulation for better performance.
+
+### Requirements
+- Analyze simulation performance
+- Identify bottlenecks
+- Optimize physics parameters
+- Simplify complex geometries where appropriate
+
+### Steps
+1. Profile your current simulation
+2. Identify performance bottlenecks
+3. Adjust physics update rates
+4. Simplify collision geometries
+5. Compare performance before and after optimization
+
+### Verification
+```bash
+# Monitor simulation performance
+ign gazebo -v 4 your_world.sdf
+
+# Check real-time factor and step times
+# Optimize until real-time factor >= 1.0
+```
+
+## Challenge Exercise: Autonomous Navigation
+
+### Objective
+Combine all learned concepts to create an autonomous navigation task.
+
+### Requirements
+- Use LIDAR for obstacle detection
+- Implement path planning
+- Navigate to a goal location
+- Avoid obstacles in the environment
+
+### Steps
+1. Combine camera and LIDAR sensors
+2. Implement SLAM or use existing packages
+3. Create a navigation stack
+4. Test autonomous navigation in your custom world
+
+### Verification
+```bash
+# Test autonomous navigation
+roslaunch your_robot_pkg autonomous_navigation.launch
+
+# Verify the robot can navigate to goal while avoiding obstacles
+```
+
+## Assessment Criteria
+
+Your exercises will be evaluated based on:
+
+1. **Correct Implementation (30%)**: Proper SDF/XML syntax and physics properties
+2. **Functionality (30%)**: Robot operates as expected in simulation
+3. **Documentation (20%)**: Clear explanations and code comments
+4. **Creativity (10%)**: Innovative solutions and features
+5. **Performance (10%)**: Efficient use of simulation resources
+
+## Resources
+
+- [Gazebo Tutorials](http://gazebosim.org/tutorials)
+- [SDF Specification](http://sdformat.org/spec)
+- [ROS Gazebo Integration](http://gazebosim.org/tutorials?tut=ros_gzplugins)
+- [Robotics Simulation Best Practices](http://gazebosim.org/tutorials?tut=simulation_quality)
+
+## Next Steps
+
+After completing these exercises, you should be able to:
+- Create complex simulation environments
+- Integrate robots with various sensors
+- Implement control systems for simulation
+- Optimize simulation performance
+- Design autonomous behaviors in simulation

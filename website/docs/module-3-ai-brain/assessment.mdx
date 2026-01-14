@@ -1,0 +1,776 @@
+---
+sidebar_position: 7
+title: "Perception and Navigation Assessment"
+---
+
+# Perception and Navigation Assessment
+
+## Overview
+
+This assessment evaluates your understanding of perception and navigation concepts in robotics. Complete all sections to demonstrate your ability to create, configure, and work with perception and navigation systems using Isaac tools and Nav2.
+
+## Section 1: Conceptual Understanding
+
+### Question 1: Perception Pipeline
+Explain the components of a typical perception pipeline and their roles in a robotic system. What are the main challenges in perception for robotics?
+
+**Expected Answer:**
+- **Components**: Sensing, preprocessing, feature extraction, object detection/recognition, semantic understanding, sensor fusion
+- **Roles**: Transform raw sensor data into meaningful information for robot decision-making
+- **Challenges**: Lighting conditions, occlusions, dynamic environments, real-time processing, sensor noise and uncertainty
+
+### Question 2: Navigation Architecture
+Describe the architecture of a navigation system. What are the differences between global and local navigation, and how do they work together?
+
+**Expected Answer:**
+- **Global Navigation**: Path planning from start to goal in a known map (e.g., A*, Dijkstra)
+- **Local Navigation**: Short-term planning to avoid obstacles and follow the global path (e.g., DWA, TEB)
+- **Integration**: Global planner provides path, local planner executes while avoiding dynamic obstacles
+
+### Question 3: Isaac Tools Integration
+Compare and contrast Isaac Sim and Isaac ROS. When would you use each, and how do they complement each other?
+
+**Expected Answer:**
+- **Isaac Sim**: Photorealistic simulation, synthetic data generation, physics simulation
+- **Isaac ROS**: Hardware-accelerated perception, navigation algorithms, real-time processing
+- **Complement**: Simulate with Isaac Sim, process with Isaac ROS, iterate for better performance
+
+## Section 2: Practical Implementation
+
+### Exercise 1: Create a Perception Node
+Create a ROS 2 node that processes RGB and depth images to detect and classify objects in the environment.
+
+**Requirements:**
+- Subscribe to `/camera/rgb/image_raw` and `/camera/depth/image_raw`
+- Implement basic object detection (using placeholder or simple thresholding)
+- Publish detected objects with position in 3D space
+- Include error handling and logging
+
+<details>
+<summary>Sample Solution</summary>
+
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from vision_msgs.msg import Detection2DArray
+from geometry_msgs.msg import PointStamped
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+from scipy.spatial.transform import Rotation as R
+
+
+class PerceptionNode(Node):
+    def __init__(self):
+        super().__init__('perception_node')
+
+        # Create CV bridge
+        self.cv_bridge = CvBridge()
+
+        # Publishers
+        self.detection_pub = self.create_publisher(Detection2DArray, '/detections', 10)
+        self.object_3d_pub = self.create_publisher(PointStamped, '/object_3d_position', 10)
+
+        # Subscribers
+        self.rgb_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.rgb_callback, 10
+        )
+        self.depth_sub = self.create_subscription(
+            Image, '/camera/depth/image_raw', self.depth_callback, 10
+        )
+
+        # Internal state
+        self.latest_rgb = None
+        self.latest_depth = None
+
+        self.get_logger().info('Perception Node initialized')
+
+    def rgb_callback(self, msg):
+        """Process RGB image for object detection."""
+        try:
+            self.latest_rgb = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            # Simple color-based object detection (for demonstration)
+            hsv = cv2.cvtColor(self.latest_rgb, cv2.COLOR_BGR2HSV)
+
+            # Define color range for detection (red for example)
+            lower_red = np.array([0, 50, 50])
+            upper_red = np.array([10, 255, 255])
+            mask1 = cv2.inRange(hsv, lower_red, upper_red)
+
+            lower_red = np.array([170, 50, 50])
+            upper_red = np.array([180, 255, 255])
+            mask2 = cv2.inRange(hsv, lower_red, upper_red)
+
+            mask = mask1 + mask2
+
+            # Find contours
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            # Process contours to find objects
+            for contour in contours:
+                area = cv2.contourArea(contour)
+                if area > 100:  # Filter small contours
+                    # Get bounding box
+                    x, y, w, h = cv2.boundingRect(contour)
+
+                    # Calculate center
+                    center_x, center_y = x + w//2, y + h//2
+
+                    # Publish 3D position if depth is available
+                    if self.latest_depth is not None:
+                        depth_value = self.latest_depth[center_y, center_x]
+
+                        # Convert pixel coordinates to 3D world coordinates
+                        # This is a simplified transformation
+                        world_x = (center_x - self.latest_rgb.shape[1]/2) * depth_value * 0.001
+                        world_y = (center_y - self.latest_rgb.shape[0]/2) * depth_value * 0.001
+                        world_z = depth_value
+
+                        # Publish 3D position
+                        point_msg = PointStamped()
+                        point_msg.header.stamp = self.get_clock().now().to_msg()
+                        point_msg.header.frame_id = 'camera_frame'
+                        point_msg.point.x = world_x
+                        point_msg.point.y = world_y
+                        point_msg.point.z = world_z
+
+                        self.object_3d_pub.publish(point_msg)
+
+                        self.get_logger().info(f'Detected object at ({world_x:.2f}, {world_y:.2f}, {world_z:.2f})')
+
+        except Exception as e:
+            self.get_logger().error(f'Error in RGB callback: {e}')
+
+    def depth_callback(self, msg):
+        """Process depth image."""
+        try:
+            self.latest_depth = self.cv_bridge.imgmsg_to_cv2(msg, "32FC1")
+        except Exception as e:
+            self.get_logger().error(f'Error in depth callback: {e}')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    perception_node = PerceptionNode()
+
+    try:
+        rclpy.spin(perception_node)
+    except KeyboardInterrupt:
+        perception_node.get_logger().info('Perception node stopped by user')
+    finally:
+        perception_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+</details>
+
+### Exercise 2: Implement Localization
+Create a simple localization system using a particle filter approach.
+
+**Requirements:**
+- Implement a basic particle filter for 2D position and orientation
+- Use sensor data (LIDAR) for particle weight updates
+- Publish estimated pose
+- Include motion model for particle prediction
+
+<details>
+<summary>Sample Solution</summary>
+
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
+from tf2_ros import TransformBroadcaster
+import numpy as np
+import math
+
+
+class ParticleFilterLocalization(Node):
+    def __init__(self):
+        super().__init__('particle_filter_localization')
+
+        # Publishers
+        self.pose_pub = self.create_publisher(PoseWithCovarianceStamped, '/estimated_pose', 10)
+
+        # Subscribers
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/scan', self.scan_callback, 10
+        )
+        self.cmd_sub = self.create_subscription(
+            Twist, '/cmd_vel', self.cmd_callback, 10
+        )
+
+        # Particle filter parameters
+        self.num_particles = 1000
+        self.particles = np.zeros((self.num_particles, 3))  # x, y, theta
+        self.weights = np.ones(self.num_particles) / self.num_particles
+
+        # Motion model parameters
+        self.motion_noise = {'linear': 0.1, 'angular': 0.05}
+        self.measurement_noise = 0.1
+
+        # Initialize particles
+        self.initialize_particles()
+
+        # Store previous command for motion model
+        self.prev_cmd = Twist()
+        self.last_time = self.get_clock().now()
+
+        self.get_logger().info('Particle Filter Localization initialized')
+
+    def initialize_particles(self):
+        """Initialize particles uniformly in a region."""
+        # For this example, initialize around (0, 0) with some spread
+        self.particles[:, 0] = np.random.normal(0, 1, self.num_particles)  # x
+        self.particles[:, 1] = np.random.normal(0, 1, self.num_particles)  # y
+        self.particles[:, 2] = np.random.uniform(-np.pi, np.pi, self.num_particles)  # theta
+
+    def motion_model(self, prev_pose, control, dt):
+        """Simple motion model with noise."""
+        linear_v, angular_v = control.linear.x, control.angular.z
+
+        # Add noise to motion
+        linear_noise = np.random.normal(0, self.motion_noise['linear'])
+        angular_noise = np.random.normal(0, self.motion_noise['angular'])
+
+        # Update pose based on motion model
+        new_theta = prev_pose[2] + (angular_v + angular_noise) * dt
+        new_x = prev_pose[0] + (linear_v + linear_noise) * math.cos(prev_pose[2]) * dt
+        new_y = prev_pose[1] + (linear_v + linear_noise) * math.sin(prev_pose[2]) * dt
+
+        return [new_x, new_y, new_theta]
+
+    def measurement_model(self, particle_pose, scan_data):
+        """Simple measurement model - just return a weight based on some metric."""
+        if scan_data is None:
+            return 1.0  # Neutral weight if no scan data
+
+        # Simplified measurement model - just return a weight based on some arbitrary metric
+        # In real implementation, this would compare predicted measurements with actual measurements
+        expected_range = 2.0  # Expected range for demonstration
+        actual_range = min(scan_data.ranges) if scan_data.ranges else expected_range
+
+        # Calculate weight based on difference
+        weight = math.exp(-abs(actual_range - expected_range) / self.measurement_noise)
+        return max(weight, 0.01)  # Prevent zero weights
+
+    def resample_particles(self):
+        """Resample particles based on their weights."""
+        # Normalize weights
+        self.weights /= np.sum(self.weights)
+
+        # Systematic resampling
+        indices = []
+        cumulative_sum = np.cumsum(self.weights)
+        j = 0
+        U = np.random.uniform(0, 1.0/self.num_particles)
+
+        for i in range(self.num_particles):
+            while U > cumulative_sum[j]:
+                j = j + 1
+            indices.append(j)
+            U += 1.0/self.num_particles
+
+        # Update particles
+        self.particles = self.particles[indices]
+        self.weights = np.ones(self.num_particles) / self.num_particles
+
+    def scan_callback(self, msg):
+        """Process LIDAR scan for particle weight updates."""
+        # Update particle weights based on scan data
+        for i in range(self.num_particles):
+            weight = self.measurement_model(self.particles[i], msg)
+            self.weights[i] *= weight
+
+        # Normalize weights
+        self.weights = np.maximum(self.weights, 1e-300)  # Prevent underflow
+        self.weights /= np.sum(self.weights)
+
+        # Resample if effective number of particles is low
+        neff = 1.0 / np.sum(self.weights**2)
+        if neff < self.num_particles / 2.0:
+            self.resample_particles()
+
+        # Estimate pose as weighted average of particles
+        estimated_pose = np.average(self.particles, axis=0, weights=self.weights)
+
+        # Publish estimated pose
+        self.publish_pose_estimate(estimated_pose)
+
+    def cmd_callback(self, msg):
+        """Process velocity commands for motion model."""
+        current_time = self.get_clock().now()
+        dt = (current_time.nanoseconds - self.last_time.nanoseconds) / 1e9
+        self.last_time = current_time
+
+        # Predict particle positions based on motion
+        for i in range(self.num_particles):
+            self.particles[i] = self.motion_model(self.particles[i], msg, dt)
+
+        self.prev_cmd = msg
+
+    def publish_pose_estimate(self, estimated_pose):
+        """Publish the estimated pose."""
+        pose_msg = PoseWithCovarianceStamped()
+        pose_msg.header.stamp = self.get_clock().now().to_msg()
+        pose_msg.header.frame_id = 'map'
+
+        pose_msg.pose.pose.position.x = estimated_pose[0]
+        pose_msg.pose.pose.position.y = estimated_pose[1]
+        pose_msg.pose.pose.position.z = 0.0
+
+        # Convert theta to quaternion
+        from tf_transformations import quaternion_from_euler
+        quat = quaternion_from_euler(0, 0, estimated_pose[2])
+        pose_msg.pose.pose.orientation.x = quat[0]
+        pose_msg.pose.pose.orientation.y = quat[1]
+        pose_msg.pose.pose.orientation.z = quat[2]
+        pose_msg.pose.pose.orientation.w = quat[3]
+
+        # Set covariance (simplified)
+        pose_msg.pose.covariance = [0.1, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.1, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0, 0.0, 0.0, 0.0, 0.0, 0.06853891945200942]
+
+        self.pose_pub.publish(pose_msg)
+
+        self.get_logger().info(f'Estimated pose: ({estimated_pose[0]:.2f}, {estimated_pose[1]:.2f}, {estimated_pose[2]:.2f})')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    pf_localization = ParticleFilterLocalization()
+
+    try:
+        rclpy.spin(pf_localization)
+    except KeyboardInterrupt:
+        pf_localization.get_logger().info('Particle filter localization stopped by user')
+    finally:
+        pf_localization.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+</details>
+
+### Exercise 3: Navigation with Obstacle Avoidance
+Implement a navigation system that can handle dynamic obstacles.
+
+**Requirements:**
+- Subscribe to sensor data (LIDAR)
+- Plan a path to a goal
+- Implement obstacle avoidance behavior
+- Handle dynamic obstacles in real-time
+
+<details>
+<summary>Sample Solution</summary>
+
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist, PoseStamped
+from nav_msgs.msg import Path
+import numpy as np
+import math
+
+
+class ObstacleAvoidanceNavigator(Node):
+    def __init__(self):
+        super().__init__('obstacle_avoidance_navigator')
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.path_pub = self.create_publisher(Path, '/current_path', 10)
+
+        # Subscribers
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/scan', self.scan_callback, 10
+        )
+
+        # Navigation parameters
+        self.goal = (5.0, 5.0)  # Target coordinates
+        self.current_pos = (0.0, 0.0)  # Current position
+        self.current_theta = 0.0  # Current orientation
+        self.safe_distance = 0.8  # Safe distance from obstacles
+        self.linear_speed = 0.3
+        self.angular_speed = 0.5
+
+        # Timer for navigation control
+        self.nav_timer = self.create_timer(0.1, self.navigation_control)
+
+        self.laser_data = None
+        self.obstacle_detected = False
+
+        self.get_logger().info('Obstacle Avoidance Navigator initialized')
+
+    def scan_callback(self, msg):
+        """Process LIDAR data for obstacle detection."""
+        self.laser_data = msg
+
+        # Check for obstacles in front of robot
+        if self.laser_data:
+            front_sector = self.laser_data.ranges[
+                len(self.laser_data.ranges)//2-30:len(self.laser_data.ranges)//2+30
+            ]
+            min_distance = min([r for r in front_sector if r > 0 and r < float('inf')], default=float('inf'))
+
+            self.obstacle_detected = min_distance < self.safe_distance
+
+    def navigation_control(self):
+        """Main navigation control logic."""
+        cmd = Twist()
+
+        if self.obstacle_detected:
+            # Obstacle detected - implement avoidance behavior
+            cmd.linear.x = 0.0
+            cmd.angular.z = self.angular_speed  # Turn to avoid obstacle
+            self.get_logger().info('Obstacle detected - turning to avoid')
+        else:
+            # No obstacles - navigate toward goal
+            # Calculate direction to goal
+            dx = self.goal[0] - self.current_pos[0]
+            dy = self.goal[1] - self.current_pos[1]
+            goal_distance = math.sqrt(dx*dx + dy*dy)
+
+            # Calculate angle to goal
+            angle_to_goal = math.atan2(dy, dx)
+            angle_diff = angle_to_goal - self.current_theta
+
+            # Normalize angle difference
+            while angle_diff > math.pi:
+                angle_diff -= 2 * math.pi
+            while angle_diff < -math.pi:
+                angle_diff += 2 * math.pi
+
+            # Turn toward goal if not aligned
+            if abs(angle_diff) > 0.2:  # 0.2 rad tolerance
+                cmd.angular.z = 0.5 * np.sign(angle_diff)
+            else:
+                # Move forward toward goal
+                cmd.linear.x = self.linear_speed
+                cmd.angular.z = 0.0
+
+            # Check if reached goal
+            if goal_distance < 0.5:  # Within 0.5m of goal
+                cmd.linear.x = 0.0
+                cmd.angular.z = 0.0
+                self.get_logger().info('Goal reached!')
+
+        self.cmd_vel_pub.publish(cmd)
+
+    def set_new_goal(self, x, y):
+        """Set a new navigation goal."""
+        self.goal = (x, y)
+        self.get_logger().info(f'New goal set: ({x}, {y})')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    navigator = ObstacleAvoidanceNavigator()
+
+    try:
+        # Set an initial goal
+        navigator.set_new_goal(3.0, 3.0)
+
+        rclpy.spin(navigator)
+    except KeyboardInterrupt:
+        navigator.get_logger().info('Obstacle avoidance navigator stopped by user')
+    finally:
+        navigator.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+</details>
+
+## Section 3: Isaac Tools Integration
+
+### Exercise 4: Isaac Sim Scene Configuration
+Create an Isaac Sim scene with sensors and a navigation environment.
+
+**Requirements:**
+- Create a scene with walls and obstacles
+- Add a robot with RGB-D camera and LIDAR
+- Configure sensors appropriately
+- Implement basic scene interaction
+
+<details>
+<summary>Sample Solution</summary>
+
+```python
+#!/usr/bin/env python3
+
+import carb
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.objects import DynamicCuboid
+from omni.isaac.sensor import Camera, RotatingLidarSensor
+from pxr import Gf, UsdGeom
+import numpy as np
+
+
+class IsaacSimNavigationScene:
+    def __init__(self):
+        self.world = World(stage_units_in_meters=1.0)
+        self.room_size = 8.0  # meters
+
+    def setup_scene(self):
+        """Set up the navigation scene with robot and sensors."""
+        print("Setting up Isaac Sim navigation scene...")
+
+        # Add ground plane
+        self.world.scene.add_default_ground_plane()
+
+        # Create room boundaries
+        self._create_room_boundaries()
+
+        # Add obstacles
+        self._add_obstacles()
+
+        # Add robot with sensors
+        self._add_robot_with_sensors()
+
+        print("Navigation scene setup complete")
+
+    def _create_room_boundaries(self):
+        """Create walls for the navigation room."""
+        wall_thickness = 0.2
+        wall_height = 2.0
+
+        # Calculate wall positions
+        room_half = self.room_size / 2.0
+
+        # Create walls
+        walls = [
+            {"name": "NorthWall", "pos": [0, room_half, wall_height/2], "rot": [0.707, 0, 0, 0.707]},
+            {"name": "SouthWall", "pos": [0, -room_half, wall_height/2], "rot": [0.707, 0, 0, 0.707]},
+            {"name": "EastWall", "pos": [room_half, 0, wall_height/2], "rot": [0.707, 0, 0.707, 0]},
+            {"name": "WestWall", "pos": [-room_half, 0, wall_height/2], "rot": [0.707, 0, 0.707, 0]}
+        ]
+
+        for wall in walls:
+            create_prim(
+                prim_path=f"/World/{wall['name']}",
+                prim_type="Cylinder",
+                position=np.array(wall['pos']),
+                orientation=np.array(wall['rot']),
+                scale=np.array([wall_thickness, self.room_size, wall_height]),
+                attributes={"radius": wall_thickness/2, "height": wall_height}
+            )
+
+    def _add_obstacles(self):
+        """Add navigation obstacles to the scene."""
+        obstacles = [
+            {"pos": [0, 2, 0.3], "size": 0.5, "color": [0.8, 0.2, 0.2]},
+            {"pos": [-2, 0, 0.3], "size": 0.4, "color": [0.2, 0.8, 0.2]},
+            {"pos": [2, -2, 0.4], "size": 0.6, "color": [0.2, 0.2, 0.8]},
+        ]
+
+        for i, obs in enumerate(obstacles):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Obstacle_{i}",
+                    name=f"obstacle_{i}",
+                    position=np.array(obs["pos"]),
+                    size=obs["size"],
+                    color=np.array(obs["color"])
+                )
+            )
+
+    def _add_robot_with_sensors(self):
+        """Add a robot equipped with navigation sensors."""
+        # Add robot base
+        create_prim(
+            prim_path="/World/RobotBase",
+            prim_type="Cuboid",
+            position=np.array([0, 0, 0.3]),
+            scale=np.array([0.5, 0.3, 0.4])
+        )
+
+        # Add RGB camera
+        self._add_rgb_camera()
+
+        # Add LIDAR sensor
+        self._add_lidar_sensor()
+
+    def _add_rgb_camera(self):
+        """Add an RGB camera to the robot."""
+        camera_path = "/World/RobotBase/RGBCamera"
+        cam_pos = np.array([0.3, 0, 0.1])  # Position in front and slightly above
+
+        create_prim(
+            prim_path=camera_path,
+            prim_type="Camera",
+            position=cam_pos,
+            orientation=np.array([0, 0, 0, 1])  # Looking forward
+        )
+
+        # Configure camera properties
+        stage = omni.usd.get_context().get_stage()
+        camera_prim = UsdGeom.Camera(stage.GetPrimAtPath(camera_path))
+        camera_prim.GetFocalLengthAttr().Set(24.0)
+        camera_prim.GetHorizontalApertureAttr().Set(20.955)
+        camera_prim.GetVerticalApertureAttr().Set(15.2908)
+
+    def _add_lidar_sensor(self):
+        """Add a LIDAR sensor to the robot."""
+        lidar_path = "/World/RobotBase/Lidar"
+        lidar_pos = np.array([0.3, 0, 0.3])  # On top of robot
+
+        create_prim(
+            prim_path=lidar_path,
+            prim_type="Cylinder",
+            position=lidar_pos,
+            scale=np.array([0.05, 0.05, 0.1])  # Small cylinder to represent LIDAR
+        )
+
+    def run_scene(self, num_steps=1000):
+        """Run the navigation scene simulation."""
+        print(f"Running navigation scene for {num_steps} steps...")
+
+        self.world.reset()
+
+        for i in range(num_steps):
+            self.world.step(render=True)
+
+            if i % 200 == 0:
+                print(f"Scene simulation step: {i}")
+
+        print("Navigation scene simulation completed!")
+
+
+def main():
+    scene = IsaacSimNavigationScene()
+
+    try:
+        scene.setup_scene()
+        scene.run_scene()
+    except Exception as e:
+        print(f"Error during scene execution: {e}")
+        carb.log_error(str(e))
+    finally:
+        scene.world.clear()
+        print("Scene cleared")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+</details>
+
+## Section 4: Analysis and Problem Solving
+
+### Scenario 1: Localization Drift
+Your robot's localization system is drifting significantly over time. Analyze potential causes and solutions.
+
+**Expected Answers:**
+- **Causes**: Wheel slippage, sensor noise, incorrect motion model, poor landmark detection
+- **Solutions**: Sensor fusion (IMU + visual odometry), landmark-based corrections, loop closure, particle filter with resampling
+
+### Scenario 2: Navigation Failures
+The navigation system fails frequently in certain environments. What could be causing this and how would you diagnose it?
+
+**Expected Answers:**
+- **Causes**: Poor map quality, dynamic obstacles not handled, sensor limitations, planning parameters too restrictive
+- **Solutions**: Improve mapping, implement dynamic obstacle detection, tune navigation parameters, use better sensors
+
+## Section 5: Advanced Integration
+
+### Exercise 5: Multi-Sensor Fusion
+Design a system that fuses data from multiple sensors (camera, LIDAR, IMU) for improved navigation.
+
+**Requirements:**
+- Describe the architecture for sensor fusion
+- Explain how different sensors complement each other
+- Implement a basic fusion algorithm
+- Discuss potential challenges and solutions
+
+<details>
+<summary>Sample Solution</summary>
+
+The multi-sensor fusion system would include:
+
+1. **Architecture**:
+   - Centralized fusion: All data goes to a central processor
+   - Decentralized fusion: Each sensor processes independently then fuses results
+   - Hybrid approach: Combines benefits of both
+
+2. **Sensor Complementarity**:
+   - **Camera**: Rich visual information, semantic understanding, but sensitive to lighting
+   - **LIDAR**: Accurate distance measurements, works in any lighting, but limited semantic info
+   - **IMU**: High-frequency motion data, but prone to drift
+
+3. **Fusion Algorithm**:
+   - Kalman Filter or Particle Filter for state estimation
+   - Weighted combination based on sensor reliability
+   - Cross-validation between sensors
+
+4. **Challenges and Solutions**:
+   - Synchronization: Use time-stamped messages and interpolation
+   - Calibration: Regular sensor calibration routines
+   - Computational load: Efficient algorithms and hardware acceleration
+</details>
+
+## Evaluation Criteria
+
+Your assessment will be evaluated based on:
+
+1. **Conceptual Understanding (20%)**: Depth and accuracy of theoretical knowledge
+2. **Implementation Quality (40%)**: Correctness and functionality of code solutions
+3. **Problem Solving (25%)**: Ability to analyze and solve navigation challenges
+4. **Isaac Tools Integration (10%)**: Proper use of Isaac tools and frameworks
+5. **Documentation (5%)**: Code comments, explanations, and clear variable names
+
+## Submission Instructions
+
+1. Implement all required exercises
+2. Test your solutions in simulation
+3. Document your code with appropriate comments
+4. Include logging statements to demonstrate understanding
+5. Create a README.md file explaining your implementation approach
+
+## Resources for Review
+
+- [Isaac Sim Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html)
+- [Isaac ROS Documentation](https://nvidia-isaac-ros.github.io/repositories_and_packages.html)
+- [ROS 2 Navigation (Nav2) Documentation](https://navigation.ros.org/)
+- Course materials on perception and navigation
+
+## Next Steps
+
+Upon successful completion of this assessment, you will be ready to advance to more complex topics including:
+- Vision-Language-Action systems
+- LLM-driven robot behavior
+- Advanced AI integration
+- Capstone project implementation

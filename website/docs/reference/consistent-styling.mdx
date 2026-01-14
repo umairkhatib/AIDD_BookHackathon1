@@ -1,0 +1,209 @@
+---
+sidebar_position: 4
+title: "Consistent Styling Implementation"
+---
+
+# Consistent Styling Implementation
+
+## Overview
+
+The Physical AI & Humanoid Robotics course website features a comprehensive, consistent styling system that ensures a uniform look and feel across all course modules. This styling system provides a professional, cohesive user experience that enhances learning and navigation.
+
+## Design Philosophy
+
+### Consistent Visual Language
+- **Color Scheme**: Unified color palette across all modules
+- **Typography**: Consistent fonts, sizes, and hierarchy
+- **Spacing**: Standardized margins, padding, and layout
+- **Components**: Uniform styling for interactive elements
+
+### Module-Specific Branding
+Each module has its own color identity while maintaining overall consistency:
+- **Module 1 (ROS 2)**: Blue theme (#4285f4)
+- **Module 2 (Simulation)**: Green theme (#34a853)
+- **Module 3 (AI Brain)**: Red theme (#ea4335)
+- **Module 4 (VLA)**: Yellow theme (#fbbc04)
+- **Capstone**: Purple theme (#9c27b0)
+
+## Styling Components
+
+### Color Variables
+The styling system uses CSS custom properties (variables) defined in the `:root` selector:
+
+```css
+:root {
+  --ifm-color-primary: #1a73e8; /* Google-style blue for robotics */
+  --ifm-color-primary-dark: #1865d0;
+  --ifm-color-primary-darker: #1659b7;
+  --ifm-color-primary-darkest: #124794;
+  --ifm-color-primary-light: #2b83eb;
+  --ifm-color-primary-lighter: #3a8dec;
+  --ifm-color-primary-lightest: #5ca2f0;
+
+  /* Module-specific colors */
+  --module-1-color: #4285f4; /* ROS 2 blue */
+  --module-2-color: #34a853; /* Simulation green */
+  --module-3-color: #ea4335; /* AI red */
+  --module-4-color: #fbbc04; /* VLA yellow */
+  --capstone-color: #9c27b0; /* Capstone purple */
+}
+```
+
+### Typography Standards
+- **Font Family**: Inter, system-ui, -apple-system, Segoe UI, Roboto, etc.
+- **Base Font Size**: 16px
+- **Line Height**: 1.6 for readability
+- **Heading Hierarchy**: Consistent sizing and spacing
+
+### Spacing System
+- **Horizontal Spacing**: 24px standard margin/padding
+- **Vertical Spacing**: 24px standard margin/padding
+- **Border Radius**: 8px for rounded corners
+- **Shadows**: Consistent shadow depth for depth perception
+
+## Component Styling
+
+### Headers
+- **H1**: 2.5rem with 1.5rem top margin
+- **H2**: 2rem with bottom border and 2rem top margin
+- **H3**: 1.5rem with 1.5rem top margin
+- **Consistent spacing**: 1rem bottom margin for all headers
+
+### Code Blocks
+- **Border Radius**: 8px (var(--ifm-global-radius))
+- **Shadows**: Subtle shadow for depth
+- **Consistent Spacing**: 1rem margin around blocks
+
+### Cards and Containers
+- **Border Radius**: 8px for all containers
+- **Shadows**: Consistent shadow depth
+- **Hover Effects**: Smooth transitions and lift effect
+- **Spacing**: 1.5rem bottom margin
+
+### Tables
+- **Rounded Corners**: 8px border radius
+- **Striped Rows**: Subtle background alternation
+- **Consistent Padding**: 0.75rem vertical, 1rem horizontal
+- **Header Styling**: Emphasized with background color
+
+### Buttons and Interactive Elements
+- **Border Radius**: 8px for all buttons
+- **Hover Effects**: Subtle lift and shadow enhancement
+- **Transitions**: 0.2s smooth transitions
+- **Focus States**: Clear visual feedback
+
+## Module-Specific Styling
+
+### Module Content Containers
+Each module has distinct styling while maintaining consistency:
+
+```css
+.module-1-content {
+  border-left: 4px solid var(--module-1-color); /* ROS 2 blue */
+}
+
+.module-2-content {
+  border-left: 4px solid var(--module-2-color); /* Simulation green */
+}
+
+.module-3-content {
+  border-left: 4px solid var(--module-3-color); /* AI red */
+}
+
+.module-4-content {
+  border-left: 4px solid var(--module-4-color); /* VLA yellow */
+}
+
+.capstone-content {
+  border-left: 4px solid var(--capstone-color); /* Capstone purple */
+}
+```
+
+### Alert and Notice Boxes
+- **Note**: Blue-themed alerts
+- **Tip**: Green-themed alerts
+- **Caution**: Yellow-themed alerts
+- **Danger**: Red-themed alerts
+- **Consistent Styling**: Rounded corners, shadows, and spacing
+
+## Responsive Design
+
+### Mobile Optimization
+- **Reduced Font Sizes**: Scaled appropriately for smaller screens
+- **Adjusted Spacing**: Optimized for touch interfaces
+- **Flexible Layouts**: Adapts to various screen sizes
+- **Touch Targets**: Adequate sizing for mobile interaction
+
+### Print Styling
+- **Navigation Removal**: Hides non-essential elements
+- **Layout Optimization**: Optimizes for printed format
+- **Content Focus**: Prioritizes essential content
+
+## Accessibility Features
+
+### Color Contrast
+- **WCAG Compliance**: Meets accessibility color contrast requirements
+- **Dark Mode**: Optimized colors for dark theme
+- **Focus Indicators**: Clear visual focus states
+
+### Typography Accessibility
+- **Readable Fonts**: Accessible font choices
+- **Appropriate Sizing**: Sufficient text size
+- **Line Spacing**: Optimized for readability
+
+## Implementation Guidelines
+
+### Using the Styling System
+To apply consistent styling in course materials:
+
+1. **Headers**: Use proper heading hierarchy (h1, h2, h3, etc.)
+2. **Code Blocks**: Use standard markdown code blocks
+3. **Alerts**: Use Docusaurus admonitions for notices
+4. **Tables**: Use standard markdown tables
+5. **Images**: Apply responsive image classes
+
+### Custom Styling
+For module-specific content, use the appropriate CSS classes:
+- `module-1-content` for ROS 2 content
+- `module-2-content` for simulation content
+- `module-3-content` for AI brain content
+- `module-4-content` for VLA content
+- `capstone-content` for capstone content
+
+## Performance Considerations
+
+### Optimized CSS
+- **Minimized**: CSS is optimized for performance
+- **Scoped**: Styles are appropriately scoped
+- **Efficient**: Uses efficient CSS selectors
+- **Modular**: Organized for maintainability
+
+## Maintenance
+
+### Adding New Styles
+When adding new styling:
+1. Use existing CSS variables for consistency
+2. Follow the established spacing system
+3. Maintain accessibility standards
+4. Test across different devices and themes
+
+### Updating Styles
+- **Global Changes**: Update CSS variables in root
+- **Component Changes**: Modify component-specific styles
+- **Module Changes**: Update module-specific styling
+- **Testing**: Always test changes across modules
+
+## Testing and Validation
+
+### Cross-Browser Testing
+- Chrome, Firefox, Safari, Edge compatibility
+- Mobile browser compatibility
+- Dark/light mode validation
+
+### Accessibility Testing
+- Screen reader compatibility
+- Keyboard navigation
+- Color contrast validation
+- Focus management
+
+This consistent styling system ensures that all course materials have a professional, unified appearance that enhances the learning experience while maintaining the flexibility to distinguish between different modules and content types.

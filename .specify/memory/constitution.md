@@ -1,55 +1,59 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- SYNC IMPACT REPORT
+Version change: N/A -> 1.0.0
+Modified principles: N/A (new constitution)
+Added sections: All sections based on project requirements
+Removed sections: None
+Templates requiring updates:
+  - .specify/templates/plan-template.md ✅ updated
+  - .specify/templates/spec-template.md ✅ updated
+  - .specify/templates/tasks-template.md ✅ updated
+  - .specify/templates/commands/*.md ⚠ pending
+Follow-up TODOs: None
+-->
+
+# AI-Spec–Driven Book with Embedded RAG Chatbot Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### Specification-First, AI-Native Development
+Specification-first, AI-native development: All development begins with clear, detailed specifications before implementation; AI tools are integrated throughout the development lifecycle to enhance productivity and maintain quality; Development follows a structured, predictable process that leverages AI assistance for code generation, testing, and documentation.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### Technical Accuracy via Primary Sources
+Technical accuracy via primary sources: All claims must be traceable to official documentation or reputable sources; Information is prioritized by source reliability: official docs → industry standards → open-source repositories; Citations use Markdown footnotes with direct links to primary sources; All AI-generated content undergoes hallucination review to ensure factual accuracy.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### Clarity for Software Engineers and AI Practitioners
+Clarity for software engineers and AI practitioners: Documentation and code must be accessible to both traditional software engineers and AI practitioners; Concepts are explained with both theoretical foundations and practical implementation details; Clear navigation and structured chapters guide users through complex topics systematically.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### Reproducibility and Transparency
+Reproducibility and transparency: All processes, builds, and deployments must be reproducible from documentation alone; Code examples are complete, runnable, and version-pinned to ensure consistent results; All dependencies and configurations are explicitly declared and documented; Development environments are standardized and documented.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### Modular Architecture
+Modular architecture: System components (book, backend, chatbot) are designed as independent modules with well-defined interfaces; Each module can be developed, tested, and deployed separately while maintaining integration capabilities; Clear separation of concerns ensures maintainability and scalability; Architecture supports both monolithic and microservice deployment patterns.
 
-### [PRINCIPLE_6_NAME]
+### Security Best Practices
+Security best practices for APIs, secrets, and data access: All API endpoints implement proper authentication and authorization; Secrets are never hardcoded and stored securely using environment variables or secret management systems; Data access patterns follow the principle of least privilege; All security-sensitive operations are logged and monitored for audit purposes.
 
+## Technology Standards
 
-[PRINCIPLE__DESCRIPTION]
+### Source Documentation and Verification
+All claims traceable to official documentation or reputable sources: Information sources are prioritized as official docs → industry standards → open-source repositories; Citations use Markdown footnotes with primary links; All AI-generated content is reviewed for hallucinations; Technical accuracy verified through primary sources.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### Book Platform Standards
+Book written in Docusaurus (MDX), deployed to GitHub Pages: Clear navigation and structured chapters with consistent formatting; Each chapter includes concepts, architecture, implementation, and pitfalls sections; Code examples are complete, runnable, and version-pinned; Navigation follows logical progression for learning objectives.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### RAG Chatbot Stack Standards
+RAG chatbot stack uses OpenAI Agents/ChatKit, FastAPI, Neon Postgres, Qdrant Cloud: Two operational modes supported - full-book context and user-selected text; Backend services follow RESTful API design principles; Database schema supports efficient vector search and retrieval operations; Vector storage optimized for document chunking and similarity search.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### Implementation Standards
+All code changes follow specification-driven development: Features implemented only after detailed specifications are approved; Code reviews verify compliance with architectural principles; Automated testing validates both functionality and adherence to standards; Peer review process includes verification of source citations and technical accuracy.
+
+### Quality Assurance
+Quality gates include source verification, technical accuracy, and security compliance: All claims must have verifiable sources; Code passes automated security scanning; Performance benchmarks meet established requirements; Documentation completeness verified before merge.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Constitution governs all development activities and supersedes informal practices: All team members must familiarize themselves with these principles; Amendments require documentation of rationale and impact assessment; Regular compliance reviews ensure adherence to standards; Version control tracks all changes to this constitution.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-01-09 | **Last Amended**: 2026-01-09

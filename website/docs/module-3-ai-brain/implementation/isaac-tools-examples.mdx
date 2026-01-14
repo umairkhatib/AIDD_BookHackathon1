@@ -1,0 +1,899 @@
+---
+sidebar_position: 1
+title: "Isaac Tools Implementation Examples"
+---
+
+# Isaac Tools Implementation Examples
+
+## Overview
+
+This section provides practical implementation examples for using NVIDIA Isaac tools for perception and navigation in robotics applications. These examples demonstrate how to leverage Isaac Sim, Isaac ROS, and related tools for creating intelligent robotic systems.
+
+## Isaac Sim Setup
+
+### Basic Isaac Sim Integration
+
+To get started with Isaac Sim, first ensure it's properly installed and configured:
+
+```bash
+# Check Isaac Sim installation
+python -c "import omni.isaac.core; print('Isaac Sim available')"
+
+# Launch Isaac Sim
+isaac-sim.bat  # On Windows
+./isaac-sim.sh  # On Linux
+```
+
+### Creating a Basic Environment
+
+```python
+#!/usr/bin/env python3
+
+"""
+Basic Isaac Sim Environment for the Physical AI & Humanoid Robotics Course
+"""
+
+import carb
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.objects import DynamicCuboid
+from pxr import Gf
+import numpy as np
+
+
+class IsaacEnvironment:
+    def __init__(self):
+        # Create the world
+        self.world = World(stage_units_in_meters=1.0)
+
+        # Set up the environment
+        self.setup_environment()
+
+    def setup_environment(self):
+        """Set up the basic environment with ground plane and objects."""
+        # Add ground plane
+        self.world.scene.add_default_ground_plane()
+
+        # Add a few objects to the environment
+        for i in range(5):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Cube_{i}",
+                    name=f"cube_{i}",
+                    position=np.array([i - 2, 0, 0.5 + i * 0.2]),
+                    size=0.1,
+                    color=np.array([0.5, 0.5, 0.5])
+                )
+            )
+
+    def run_simulation(self, num_iterations=1000):
+        """Run the simulation for a specified number of iterations."""
+        self.world.reset()
+
+        for i in range(num_iterations):
+            self.world.step(render=True)
+
+            # Print simulation step occasionally
+            if i % 100 == 0:
+                print(f"Simulation step: {i}")
+
+        print("Simulation completed!")
+
+
+def main():
+    # Initialize Isaac Sim
+    env = IsaacEnvironment()
+
+    try:
+        env.run_simulation()
+    except Exception as e:
+        print(f"Error during simulation: {e}")
+    finally:
+        # Cleanup
+        env.world.clear()
+        print("World cleared")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Isaac ROS Integration
+
+### Isaac ROS Perception Pipeline
+
+```python
+#!/usr/bin/env python3
+
+"""
+Isaac ROS Perception Pipeline Example
+This example demonstrates how to use Isaac ROS packages for perception.
+"""
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, PointCloud2, LaserScan
+from geometry_msgs.msg import Twist
+from std_msgs.msg import String
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+
+
+class IsaacPerceptionPipeline(Node):
+    def __init__(self):
+        super().__init__('isaac_perception_pipeline')
+
+        # Create bridge for image conversion
+        self.cv_bridge = CvBridge()
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.perception_result_pub = self.create_publisher(String, '/perception_result', 10)
+
+        # Subscribers
+        self.image_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.image_callback, 10
+        )
+        self.depth_sub = self.create_subscription(
+            Image, '/camera/depth/image_raw', self.depth_callback, 10
+        )
+        self.lidar_sub = self.create_subscription(
+            LaserScan, '/scan', self.lidar_callback, 10
+        )
+
+        # Perception state
+        self.latest_image = None
+        self.latest_depth = None
+        self.latest_lidar = None
+
+        # Timer for perception processing
+        self.timer = self.create_timer(0.1, self.process_perception)
+
+        self.get_logger().info('Isaac Perception Pipeline initialized')
+
+    def image_callback(self, msg):
+        """Process RGB camera data."""
+        try:
+            # Convert ROS Image to OpenCV image
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.latest_image = cv_image
+
+            # Perform basic image processing
+            self.detect_objects(cv_image)
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+
+    def depth_callback(self, msg):
+        """Process depth camera data."""
+        try:
+            # Convert ROS Image to OpenCV image (depth)
+            depth_image = self.cv_bridge.imgmsg_to_cv2(msg, "32FC1")
+            self.latest_depth = depth_image
+
+            # Process depth information
+            self.extract_depth_features(depth_image)
+        except Exception as e:
+            self.get_logger().error(f'Error processing depth: {e}')
+
+    def lidar_callback(self, msg):
+        """Process LIDAR scan data."""
+        self.latest_lidar = msg
+
+        # Process LIDAR information
+        self.process_lidar_scan(msg)
+
+    def detect_objects(self, image):
+        """Perform object detection on the image."""
+        # Placeholder for object detection
+        # In a real implementation, you would use Isaac ROS detectnet
+        height, width = image.shape[:2]
+
+        # Draw a simple bounding box as a placeholder
+        cv2.rectangle(image, (width//4, height//4), (3*width//4, 3*height//4), (0, 255, 0), 2)
+
+        # Publish a simple result
+        result_msg = String()
+        result_msg.data = f"Processed image: {width}x{height}"
+        self.perception_result_pub.publish(result_msg)
+
+    def extract_depth_features(self, depth_image):
+        """Extract features from depth data."""
+        # Placeholder for depth feature extraction
+        if depth_image is not None:
+            # Calculate average depth in center region
+            h, w = depth_image.shape
+            center_region = depth_image[h//4:3*h//4, w//4:3*w//4]
+            avg_depth = np.nanmean(center_region[np.isfinite(center_region)])
+
+            self.get_logger().info(f'Average depth in center: {avg_depth:.2f}m')
+
+    def process_lidar_scan(self, scan_msg):
+        """Process LIDAR scan for navigation."""
+        if scan_msg.ranges:
+            # Find minimum distance in front of robot (forward 30 degrees)
+            front_ranges = scan_msg.ranges[len(scan_msg.ranges)//2-15:len(scan_msg.ranges)//2+15]
+            min_front_dist = min([r for r in front_ranges if r > 0 and r < float('inf')], default=float('inf'))
+
+            # Publish navigation command based on obstacle detection
+            cmd = Twist()
+            if min_front_dist > 1.0:  # No obstacle within 1 meter
+                cmd.linear.x = 0.3  # Move forward
+                cmd.angular.z = 0.0
+            else:
+                cmd.linear.x = 0.0  # Stop
+                cmd.angular.z = 0.5  # Turn right
+
+            self.cmd_vel_pub.publish(cmd)
+
+    def process_perception(self):
+        """Main perception processing loop."""
+        if self.latest_image is not None:
+            # Process the latest image
+            self.detect_objects(self.latest_image)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    perception_pipeline = IsaacPerceptionPipeline()
+
+    try:
+        rclpy.spin(perception_pipeline)
+    except KeyboardInterrupt:
+        perception_pipeline.get_logger().info('Perception pipeline stopped by user')
+    finally:
+        perception_pipeline.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Isaac Navigation Implementation
+
+### Navigation with Isaac Tools
+
+```python
+#!/usr/bin/env python3
+
+"""
+Isaac Navigation Implementation Example
+This example shows how to implement navigation using Isaac tools.
+"""
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Twist
+from nav_msgs.msg import OccupancyGrid, Path
+from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool
+import numpy as np
+import math
+from typing import List, Tuple
+
+
+class IsaacNavigator(Node):
+    def __init__(self):
+        super().__init__('isaac_navigator')
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.goal_pub = self.create_publisher(PoseStamped, '/goal_pose', 10)
+        self.path_pub = self.create_publisher(Path, '/plan', 10)
+
+        # Subscribers
+        self.laser_sub = self.create_subscription(
+            LaserScan, '/scan', self.laser_callback, 10
+        )
+        self.map_sub = self.create_subscription(
+            OccupancyGrid, '/map', self.map_callback, 10
+        )
+
+        # Navigation state
+        self.current_pose = (0.0, 0.0, 0.0)  # x, y, theta
+        self.goal_pose = (5.0, 5.0, 0.0)    # x, y, theta
+        self.map_data = None
+        self.obstacle_detected = False
+        self.navigation_active = True
+
+        # Timer for navigation control
+        self.nav_timer = self.create_timer(0.1, self.navigation_loop)
+
+        self.get_logger().info('Isaac Navigator initialized')
+
+    def laser_callback(self, msg):
+        """Process LIDAR data for obstacle detection."""
+        # Check for obstacles in front of robot
+        front_sector = msg.ranges[len(msg.ranges)//2-30:len(msg.ranges)//2+30]
+        min_distance = min([r for r in front_sector if r > 0 and r < float('inf')], default=float('inf'))
+
+        self.obstacle_detected = min_distance < 0.8  # 0.8m threshold
+
+        if self.obstacle_detected:
+            self.get_logger().info(f'Obstacle detected at {min_distance:.2f}m')
+
+    def map_callback(self, msg):
+        """Process occupancy grid map."""
+        self.map_data = {
+            'data': np.array(msg.data).reshape(msg.info.height, msg.info.width),
+            'resolution': msg.info.resolution,
+            'origin': (msg.info.origin.position.x, msg.info.origin.position.y)
+        }
+
+    def calculate_path(self) -> List[Tuple[float, float]]:
+        """Calculate path to goal using A* or similar algorithm."""
+        # Simple path calculation - in practice, use Nav2
+        path = []
+        current_x, current_y, _ = self.current_pose
+        goal_x, goal_y, _ = self.goal_pose
+
+        # For simplicity, create a straight line to goal
+        steps = 10
+        for i in range(steps + 1):
+            t = i / steps
+            x = current_x + t * (goal_x - current_x)
+            y = current_y + t * (goal_y - current_y)
+            path.append((x, y))
+
+        return path
+
+    def update_current_pose(self):
+        """Update robot's current pose based on motion model."""
+        # In a real implementation, this would come from localization
+        # For simulation, we'll estimate based on commands
+        pass
+
+    def navigation_loop(self):
+        """Main navigation control loop."""
+        if not self.navigation_active:
+            return
+
+        cmd = Twist()
+
+        if self.obstacle_detected:
+            # Stop and turn to avoid obstacle
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.5  # Turn right
+            self.get_logger().info('Avoiding obstacle')
+        else:
+            # Calculate direction to goal
+            curr_x, curr_y, curr_theta = self.current_pose
+            goal_x, goal_y, _ = self.goal_pose
+
+            # Calculate angle to goal
+            angle_to_goal = math.atan2(goal_y - curr_y, goal_x - curr_x)
+            angle_diff = angle_to_goal - curr_theta
+
+            # Normalize angle difference
+            while angle_diff > math.pi:
+                angle_diff -= 2 * math.pi
+            while angle_diff < -math.pi:
+                angle_diff += 2 * math.pi
+
+            # Turn toward goal
+            if abs(angle_diff) > 0.2:  # 0.2 rad tolerance
+                cmd.angular.z = 0.5 * np.sign(angle_diff)
+            else:
+                # Move forward toward goal
+                cmd.linear.x = 0.3
+                cmd.angular.z = 0.0
+
+        # Check if reached goal (within 0.5m)
+        distance_to_goal = math.sqrt(
+            (curr_x - goal_x)**2 + (curr_y - goal_y)**2
+        )
+
+        if distance_to_goal < 0.5:
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.0
+            self.navigation_active = False
+            self.get_logger().info('Goal reached!')
+
+        self.cmd_vel_pub.publish(cmd)
+
+    def set_new_goal(self, x: float, y: float, theta: float = 0.0):
+        """Set a new navigation goal."""
+        self.goal_pose = (x, y, theta)
+        self.navigation_active = True
+        self.get_logger().info(f'New goal set: ({x}, {y}, {theta})')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    navigator = IsaacNavigator()
+
+    try:
+        # Set a goal
+        navigator.set_new_goal(3.0, 3.0)
+
+        rclpy.spin(navigator)
+    except KeyboardInterrupt:
+        navigator.get_logger().info('Navigator stopped by user')
+    finally:
+        navigator.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Isaac Sim Scene Configuration
+
+### Creating Isaac Sim Scenes
+
+```python
+#!/usr/bin/env python3
+
+"""
+Isaac Sim Scene Configuration Example
+This example shows how to programmatically create scenes in Isaac Sim.
+"""
+
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage, get_stage_units
+from omni.isaac.core.utils.prims import create_prim, get_prim_at_path
+from omni.isaac.core.utils.nucleus import get_assets_root_path
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.objects import DynamicCuboid, DynamicSphere
+from omni.isaac.core.materials import OmniPBRMaterial
+from omni.isaac.core.utils.materials import create_material
+import numpy as np
+import carb
+
+
+class IsaacSceneBuilder:
+    def __init__(self):
+        self.world = World(stage_units_in_meters=1.0)
+        self.assets_root_path = get_assets_root_path()
+
+    def create_indoor_scene(self):
+        """Create an indoor navigation scene."""
+        # Add ground plane
+        self.world.scene.add_default_ground_plane()
+
+        # Create walls
+        self._create_room_walls()
+
+        # Add furniture
+        self._add_furniture()
+
+        # Add navigation obstacles
+        self._add_navigation_obstacles()
+
+        # Add a robot
+        self._add_robot()
+
+        print("Indoor navigation scene created!")
+
+    def _create_room_walls(self):
+        """Create walls for the room."""
+        # North wall
+        create_prim(
+            prim_path="/World/NorthWall",
+            prim_type="Capsule",
+            position=np.array([0, 5, 1]),
+            orientation=np.array([0.707, 0, 0, 0.707]),  # Rotate 90 deg around X
+            scale=np.array([1, 10, 0.2]),
+            attributes={"radius": 0.1, "height": 10}
+        )
+
+        # South wall
+        create_prim(
+            prim_path="/World/SouthWall",
+            prim_type="Capsule",
+            position=np.array([0, -5, 1]),
+            orientation=np.array([0.707, 0, 0, 0.707]),
+            scale=np.array([1, 10, 0.2]),
+            attributes={"radius": 0.1, "height": 10}
+        )
+
+        # East wall
+        create_prim(
+            prim_path="/World/EastWall",
+            prim_type="Capsule",
+            position=np.array([5, 0, 1]),
+            orientation=np.array([0.707, 0, 0.707, 0]),  # Rotate 90 deg around Z
+            scale=np.array([1, 10, 0.2]),
+            attributes={"radius": 0.1, "height": 10}
+        )
+
+        # West wall
+        create_prim(
+            prim_path="/World/WestWall",
+            prim_type="Capsule",
+            position=np.array([-5, 0, 1]),
+            orientation=np.array([0.707, 0, 0.707, 0]),
+            scale=np.array([1, 10, 0.2]),
+            attributes={"radius": 0.1, "height": 10}
+        )
+
+    def _add_furniture(self):
+        """Add furniture to the scene."""
+        # Add a table
+        self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/Table",
+                name="table",
+                position=np.array([2, 2, 0.4]),
+                size=0.8,
+                color=np.array([0.8, 0.6, 0.4])
+            )
+        )
+
+        # Add a chair
+        self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/Chair",
+                name="chair",
+                position=np.array([2.5, 2.5, 0.2]),
+                size=0.3,
+                color=np.array([0.4, 0.4, 0.8])
+            )
+        )
+
+    def _add_navigation_obstacles(self):
+        """Add obstacles for navigation testing."""
+        # Add some random obstacles
+        for i in range(5):
+            x = np.random.uniform(-4, 4)
+            y = np.random.uniform(-4, 4)
+
+            # Make sure obstacles aren't too close to walls
+            if abs(x) > 3.5 or abs(y) > 3.5:
+                continue
+
+            self.world.scene.add(
+                DynamicSphere(
+                    prim_path=f"/World/Obstacle_{i}",
+                    name=f"obstacle_{i}",
+                    position=np.array([x, y, 0.2]),
+                    radius=0.2,
+                    color=np.array([0.9, 0.1, 0.1])
+                )
+            )
+
+    def _add_robot(self):
+        """Add a robot to the scene."""
+        # In a real scenario, you would add a specific robot model
+        # For this example, we'll add a simple cuboid representing the robot
+        self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/Robot",
+                name="robot",
+                position=np.array([-4, -4, 0.2]),
+                size=0.3,
+                color=np.array([0.1, 0.9, 0.1])
+            )
+        )
+
+    def run_scene(self, num_steps=1000):
+        """Run the scene simulation."""
+        self.world.reset()
+
+        for i in range(num_steps):
+            self.world.step(render=True)
+
+            if i % 100 == 0:
+                print(f"Scene simulation step: {i}")
+
+        print("Scene simulation completed!")
+
+
+def main():
+    builder = IsaacSceneBuilder()
+
+    try:
+        builder.create_indoor_scene()
+        builder.run_scene()
+    except Exception as e:
+        print(f"Error during scene creation: {e}")
+    finally:
+        builder.world.clear()
+        print("Scene cleared")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Isaac Sim Sensors Configuration
+
+### Configuring Sensors for Perception
+
+```python
+#!/usr/bin/env python3
+
+"""
+Isaac Sim Sensor Configuration Example
+This example shows how to configure various sensors in Isaac Sim for perception.
+"""
+
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.sensor import Camera, RotatingLidarSensor
+from pxr import Gf, UsdGeom, Sdf
+import numpy as np
+
+
+class IsaacSensorConfigurator:
+    def __init__(self):
+        self.world = World(stage_units_in_meters=1.0)
+
+    def setup_robot_with_sensors(self):
+        """Set up a robot with various sensors."""
+        # Add ground plane
+        self.world.scene.add_default_ground_plane()
+
+        # Create a simple robot base
+        create_prim(
+            prim_path="/World/RobotBase",
+            prim_type="Cube",
+            position=np.array([0, 0, 0.2]),
+            scale=np.array([0.5, 0.3, 0.4])
+        )
+
+        # Add RGB camera
+        self._add_rgb_camera()
+
+        # Add depth camera
+        self._add_depth_camera()
+
+        # Add LIDAR sensor
+        self._add_lidar_sensor()
+
+        print("Robot with sensors configured!")
+
+    def _add_rgb_camera(self):
+        """Add an RGB camera to the robot."""
+        # Create camera prim
+        camera_prim_path = "/World/RobotBase/RGBCamera"
+
+        create_prim(
+            prim_path=camera_prim_path,
+            prim_type="Camera",
+            position=np.array([0.3, 0, 0.1]),  # Positioned at front of robot
+            orientation=np.array([0, 0, 0, 1])  # Looking forward
+        )
+
+        # Get the camera prim and configure it
+        camera_prim = UsdGeom.Camera(omni.usd.get_context().get_stage().GetPrimAtPath(camera_prim_path))
+
+        # Set camera properties
+        camera_prim.GetFocalLengthAttr().Set(24.0)  # mm
+        camera_prim.GetHorizontalApertureAttr().Set(20.955)  # mm
+        camera_prim.GetVerticalApertureAttr().Set(15.2908)  # mm
+
+        print("RGB camera added")
+
+    def _add_depth_camera(self):
+        """Add a depth camera to the robot."""
+        # Create depth camera prim
+        depth_camera_path = "/World/RobotBase/DepthCamera"
+
+        create_prim(
+            prim_path=depth_camera_path,
+            prim_type="Camera",
+            position=np.array([0.3, 0, 0.15]),  # Slightly above RGB camera
+            orientation=np.array([0, 0, 0, 1])   # Looking forward
+        )
+
+        # Configure depth camera properties
+        depth_cam_prim = UsdGeom.Camera(omni.usd.get_context().get_stage().GetPrimAtPath(depth_camera_path))
+        depth_cam_prim.GetFocalLengthAttr().Set(24.0)
+        depth_cam_prim.GetHorizontalApertureAttr().Set(20.955)
+        depth_cam_prim.GetVerticalApertureAttr().Set(15.2908)
+
+        print("Depth camera added")
+
+    def _add_lidar_sensor(self):
+        """Add a rotating LIDAR sensor to the robot."""
+        # For this example, we'll represent the LIDAR with a placeholder
+        # In Isaac Sim, you would use the RotatingLidarSensor class
+        lidar_path = "/World/RobotBase/Lidar"
+
+        create_prim(
+            prim_path=lidar_path,
+            prim_type="Cylinder",
+            position=np.array([0.3, 0, 0.3]),  # On top of robot
+            scale=np.array([0.05, 0.05, 0.1])   # Small cylinder to represent LIDAR
+        )
+
+        print("LIDAR sensor placeholder added")
+
+    def run_with_sensors(self, num_steps=500):
+        """Run the simulation with sensors."""
+        self.world.reset()
+
+        for i in range(num_steps):
+            self.world.step(render=True)
+
+            if i % 100 == 0:
+                print(f"Sensor simulation step: {i}")
+
+                # In a real implementation, you would collect sensor data here
+                # For example:
+                # rgb_data = self.rgb_camera.get_rgb_data()
+                # depth_data = self.depth_camera.get_depth_data()
+                # lidar_data = self.lidar.get_point_cloud()
+
+        print("Sensor simulation completed!")
+
+
+def main():
+    configurator = IsaacSensorConfigurator()
+
+    try:
+        configurator.setup_robot_with_sensors()
+        configurator.run_with_sensors()
+    except Exception as e:
+        print(f"Error during sensor configuration: {e}")
+    finally:
+        configurator.world.clear()
+        print("Sensors and world cleared")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Isaac ROS Perception Nodes
+
+### Isaac ROS DetectNet Example
+
+```python
+#!/usr/bin/env python3
+
+"""
+Isaac ROS DetectNet Example
+This example shows how to use Isaac ROS for object detection.
+"""
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from vision_msgs.msg import Detection2DArray, ObjectHypothesisWithPose
+from geometry_msgs.msg import Point
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+
+
+class IsaacDetectNetNode(Node):
+    def __init__(self):
+        super().__init__('isaac_detectnet_node')
+
+        # Create CV bridge
+        self.cv_bridge = CvBridge()
+
+        # Publishers and subscribers
+        self.image_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.image_callback, 10
+        )
+        self.detection_pub = self.create_publisher(
+            Detection2DArray, '/detectnet/detections', 10
+        )
+
+        # Detection parameters
+        self.confidence_threshold = 0.5
+
+        self.get_logger().info('Isaac DetectNet Node initialized')
+
+    def image_callback(self, msg):
+        """Process incoming image for object detection."""
+        try:
+            # Convert ROS Image to OpenCV image
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            # Perform detection (placeholder - in real Isaac ROS, this would use TensorRT)
+            detections = self.perform_detection(cv_image)
+
+            # Publish detections
+            self.publish_detections(detections, msg.header)
+
+        except Exception as e:
+            self.get_logger().error(f'Error in image callback: {e}')
+
+    def perform_detection(self, image):
+        """Perform object detection on the image."""
+        # Placeholder for actual detection
+        # In Isaac ROS, this would use hardware-accelerated detection
+        height, width = image.shape[:2]
+
+        # Simulate some detections
+        detections = []
+
+        # Example: detect a person in the center
+        if np.random.random() > 0.3:  # 70% chance of detection
+            detection = {
+                'bbox': (width//4, height//4, 3*width//4, 3*height//4),
+                'label': 'person',
+                'confidence': 0.85
+            }
+            detections.append(detection)
+
+        # Example: detect a cup
+        if np.random.random() > 0.5:  # 50% chance of detection
+            detection = {
+                'bbox': (width//2, height//3, width//2 + 100, height//3 + 100),
+                'label': 'cup',
+                'confidence': 0.72
+            }
+            detections.append(detection)
+
+        return detections
+
+    def publish_detections(self, detections, header):
+        """Publish detection results."""
+        detection_array_msg = Detection2DArray()
+        detection_array_msg.header = header
+
+        for det in detections:
+            if det['confidence'] >= self.confidence_threshold:
+                detection_msg = Detection2D()
+
+                # Set bounding box
+                x1, y1, x2, y2 = det['bbox']
+                detection_msg.bbox.center.x = (x1 + x2) / 2.0
+                detection_msg.bbox.center.y = (y1 + y2) / 2.0
+                detection_msg.bbox.size_x = abs(x2 - x1)
+                detection_msg.bbox.size_y = abs(y2 - y1)
+
+                # Set hypothesis
+                hypothesis = ObjectHypothesisWithPose()
+                hypothesis.id = det['label']
+                hypothesis.score = det['confidence']
+
+                detection_msg.results.append(hypothesis)
+
+                detection_array_msg.detections.append(detection_msg)
+
+        self.detection_pub.publish(detection_array_msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    detectnet_node = IsaacDetectNetNode()
+
+    try:
+        rclpy.spin(detectnet_node)
+    except KeyboardInterrupt:
+        detectnet_node.get_logger().info('DetectNet node stopped by user')
+    finally:
+        detectnet_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Best Practices for Isaac Tools
+
+### Performance Optimization
+
+1. **GPU Utilization**: Ensure proper CUDA and TensorRT setup
+2. **Memory Management**: Efficient allocation and deallocation
+3. **Pipeline Optimization**: Minimize data copying between stages
+4. **Threading**: Use appropriate threading models for parallel processing
+
+### Troubleshooting
+
+1. **Isaac Sim Issues**: Check GPU compatibility and drivers
+2. **ROS Bridge Issues**: Verify topic names and message types
+3. **Performance Issues**: Monitor GPU and CPU usage
+4. **Sensor Issues**: Validate sensor configurations and calibrations
+
+## Summary
+
+These examples demonstrate practical implementations using NVIDIA Isaac tools for perception and navigation. From basic scene creation in Isaac Sim to advanced perception pipelines with Isaac ROS, these examples provide a foundation for building intelligent robotic systems. The integration of Isaac tools with ROS 2 enables powerful perception and navigation capabilities for autonomous robots.

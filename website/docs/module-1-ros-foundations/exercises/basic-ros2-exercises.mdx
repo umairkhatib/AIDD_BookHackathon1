@@ -1,0 +1,235 @@
+---
+sidebar_position: 1
+title: "Basic ROS 2 Node Exercises"
+---
+
+# Basic ROS 2 Node Exercises
+
+## Exercise 1: Simple Publisher Node
+
+### Objective
+Create a ROS 2 publisher node that publishes a counter value to a topic called `counter_topic`.
+
+### Requirements
+- Create a node named `counter_publisher`
+- Publish integer values to the `counter_topic` every 1 second
+- The published message should be of type `std_msgs/Int64`
+- Start the counter from 0 and increment by 1 for each message
+
+### Solution Steps
+1. Create a new Python file called `counter_publisher.py`
+2. Import the necessary modules: `rclpy`, `Node`, and `Int64` message type
+3. Create a class that inherits from `Node`
+4. Initialize a publisher for the `Int64` message type
+5. Create a timer to publish messages at 1Hz
+6. Implement the timer callback to publish counter values
+7. Test your node by running it and using `ros2 topic echo` to view the messages
+
+### Verification
+Run your node and verify that messages are being published:
+```bash
+# Terminal 1: Run your publisher node
+python3 counter_publisher.py
+
+# Terminal 2: Echo the topic to see the messages
+ros2 topic echo /counter_topic std_msgs/msg/Int64
+```
+
+## Exercise 2: Subscriber Node
+
+### Objective
+Create a ROS 2 subscriber node that listens to the `counter_topic` and prints the received values.
+
+### Requirements
+- Create a node named `counter_subscriber`
+- Subscribe to the `counter_topic`
+- Print the received counter values to the console
+- Use appropriate logging
+
+### Solution Steps
+1. Create a new Python file called `counter_subscriber.py`
+2. Import the necessary modules
+3. Create a class that inherits from `Node`
+4. Initialize a subscription to the `Int64` message type
+5. Implement the subscription callback to handle received messages
+6. Test your node by running it alongside the publisher from Exercise 1
+
+### Verification
+Run both nodes and verify that the subscriber receives and prints the counter values:
+```bash
+# Terminal 1: Run the publisher
+python3 counter_publisher.py
+
+# Terminal 2: Run the subscriber
+python3 counter_subscriber.py
+```
+
+## Exercise 3: Publisher with Custom Message
+
+### Objective
+Create a custom message type and a publisher that uses it to publish robot status information.
+
+### Requirements
+- Create a custom message file `RobotStatus.msg` with fields: `string name`, `int64 battery_level`, `bool is_moving`
+- Create a publisher node that publishes robot status messages
+- Publish messages every 2 seconds with changing values
+
+### Solution Steps
+1. Create a `msg` directory in your package
+2. Create the `RobotStatus.msg` file with the specified fields
+3. Build your package to generate the message definitions
+4. Create a publisher node that uses the custom message
+5. Publish messages with different robot status values
+
+### Verification
+Check that your custom messages are being published correctly:
+```bash
+# Echo your custom message type
+ros2 topic echo /robot_status your_package_name/msg/RobotStatus
+```
+
+## Exercise 4: Service Server and Client
+
+### Objective
+Create a service that calculates the distance between two 2D points and implement both server and client.
+
+### Requirements
+- Define a service file `CalculateDistance.srv` with request fields `float64 x1, y1, x2, y2` and response field `float64 distance`
+- Create a service server that calculates Euclidean distance
+- Create a service client that sends requests to the server
+- The client should request distance calculations for multiple point pairs
+
+### Solution Steps
+1. Create a `srv` directory in your package
+2. Create the `CalculateDistance.srv` file with the specified fields
+3. Build your package to generate the service definitions
+4. Create the service server node
+5. Create the service client node
+6. Test the service by running both nodes
+
+### Verification
+Run the server and client to verify the service works:
+```bash
+# Terminal 1: Run the service server
+ros2 run your_package_name distance_server
+
+# Terminal 2: Run the service client
+ros2 run your_package_name distance_client
+```
+
+## Exercise 5: Parameter-Based Publisher
+
+### Objective
+Create a publisher node that uses parameters to configure its behavior.
+
+### Requirements
+- Create a node that publishes messages to a configurable topic
+- Use a parameter to set the message content
+- Use a parameter to set the publishing frequency
+- Print parameter values when the node starts
+
+### Solution Steps
+1. Create a publisher node
+2. Declare parameters for topic name, message content, and frequency
+3. Use the parameters to configure the node's behavior
+4. Print parameter values to console on startup
+5. Test by running with different parameter values
+
+### Verification
+Run your node with custom parameters:
+```bash
+# Run with custom parameters
+ros2 run your_package_name param_publisher --ros-args -p topic_name:="custom_topic" -p message:="Custom Message" -p frequency:=0.5
+```
+
+## Exercise 6: Multi-Node System
+
+### Objective
+Create a system with multiple nodes that work together to simulate a simple robot control system.
+
+### Requirements
+- Create a sensor node that publishes random sensor readings
+- Create a controller node that subscribes to sensor data and publishes motor commands
+- Create an actuator node that subscribes to motor commands
+- Use appropriate message types for sensor and motor data
+- All nodes should have proper logging
+
+### Solution Steps
+1. Plan the message types needed for sensor and motor data
+2. Create the sensor node (publisher)
+3. Create the controller node (subscriber and publisher)
+4. Create the actuator node (subscriber)
+5. Test the system by running all three nodes together
+
+### Verification
+Run all nodes and verify the data flow:
+```bash
+# Terminal 1: Run sensor node
+ros2 run your_package_name sensor_node
+
+# Terminal 2: Run controller node
+ros2 run your_package_name controller_node
+
+# Terminal 3: Run actuator node
+ros2 run your_package_name actuator_node
+```
+
+## Exercise 7: Launch File
+
+### Objective
+Create a launch file that starts multiple nodes simultaneously.
+
+### Requirements
+- Create a launch file that starts the nodes from Exercise 6
+- Include parameters in the launch file
+- Use the launch file to start all nodes at once
+
+### Solution Steps
+1. Create a `launch` directory in your package
+2. Create a Python launch file
+3. Include all three nodes from Exercise 6
+4. Add parameters to the launch file
+5. Test the launch file
+
+### Verification
+Use the launch file to start all nodes:
+```bash
+# Run all nodes with a single command
+ros2 launch your_package_name multi_robot_system.launch.py
+```
+
+## Exercise 8: Quality of Service (QoS) Settings
+
+### Objective
+Experiment with different QoS settings to understand their impact on communication.
+
+### Requirements
+- Create a publisher with different QoS settings (reliable vs best effort)
+- Create a subscriber with matching and mismatched QoS settings
+- Observe the differences in message delivery
+- Document your findings
+
+### Solution Steps
+1. Create a publisher with configurable QoS settings
+2. Create a subscriber with configurable QoS settings
+3. Test with matching and non-matching QoS profiles
+4. Compare message delivery rates and reliability
+5. Document your observations
+
+### Verification
+Test different QoS configurations and observe the results:
+```bash
+# Test with reliable QoS
+python3 qos_test_publisher.py --qos reliable
+python3 qos_test_subscriber.py --qos reliable
+
+# Test with best effort QoS
+python3 qos_test_publisher.py --qos best_effort
+python3 qos_test_subscriber.py --qos best_effort
+```
+
+## Summary
+
+These exercises provide hands-on experience with the core concepts of ROS 2. Complete each exercise to build your understanding of nodes, topics, services, parameters, and other fundamental ROS 2 concepts. Each exercise builds upon the previous ones, so try to complete them in order.
+
+Remember to properly clean up resources in your nodes and use appropriate logging to help with debugging.

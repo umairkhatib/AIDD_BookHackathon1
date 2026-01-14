@@ -1,0 +1,414 @@
+---
+sidebar_position: 6
+title: "Troubleshooting Guides"
+---
+
+# Troubleshooting Guides
+
+## Overview
+
+This section provides comprehensive troubleshooting guides for each module in the Physical AI & Humanoid Robotics course. These guides will help students overcome common challenges and technical issues they may encounter during their studies.
+
+## Module 1: ROS 2 Fundamentals Troubleshooting
+
+### Common Issues and Solutions
+
+#### Issue: ROS 2 Environment Not Sourced
+**Symptoms**: Commands like `ros2 run` or `ros2 topic` not found
+**Solution**:
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Add to ~/.bashrc for permanent sourcing
+echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+```
+
+#### Issue: Nodes Cannot Communicate
+**Symptoms**: Publishers and subscribers not connecting
+**Solution**:
+1. Check ROS domain ID:
+   ```bash
+   echo $ROS_DOMAIN_ID
+   export ROS_DOMAIN_ID=0  # Ensure same domain ID for all nodes
+   ```
+
+2. Verify ROS daemon:
+   ```bash
+   ros2 daemon status
+   ros2 daemon start  # Start if not running
+   ```
+
+#### Issue: Python Import Errors
+**Symptoms**: ImportError when importing rclpy
+**Solution**:
+```bash
+# Ensure Python environment is properly configured
+pip3 install -U setuptools
+
+# Verify Python path
+python3 -c "import rclpy; print(rclpy.__file__)"
+```
+
+#### Issue: Permission Denied for Device Access
+**Symptoms**: Cannot access serial ports or USB devices
+**Solution**:
+```bash
+# Add user to dialout group
+sudo usermod -a -G dialout $USER
+
+# Log out and log back in for changes to take effect
+```
+
+## Module 2: Digital Twin Simulation Troubleshooting
+
+### Isaac Sim Common Issues
+
+#### Issue: Isaac Sim Won't Launch
+**Symptoms**: Isaac Sim fails to start or crashes immediately
+**Solution**:
+1. Check NVIDIA GPU drivers:
+   ```bash
+   nvidia-smi
+   # Ensure driver version supports Isaac Sim
+   ```
+
+2. Verify system requirements:
+   - NVIDIA GPU with RT cores (RTX series recommended)
+   - CUDA 11.8 or later
+   - Sufficient VRAM (8GB+ recommended)
+
+#### Issue: Isaac Sim ROS Bridge Not Connecting
+**Symptoms**: No communication between Isaac Sim and ROS 2 nodes
+**Solution**:
+1. Enable Isaac ROS Bridge extensions in Isaac Sim:
+   - Open Isaac Sim
+   - Go to Window → Extensions
+   - Enable Isaac ROS Bridge extensions
+
+2. Verify ROS bridge nodes:
+   ```bash
+   ros2 run isaac_ros_managed_nitros isaac_ros_managed_nitros
+   ```
+
+#### Issue: Physics Simulation Issues
+**Symptoms**: Robot falls through floor or unrealistic physics behavior
+**Solution**:
+1. Check physics properties in USD stage
+2. Verify collision meshes are properly configured
+3. Adjust physics material properties
+
+### Gazebo Simulation Issues
+
+#### Issue: Gazebo Server Not Starting
+**Symptoms**: Gazebo fails to launch or hangs at startup
+**Solution**:
+```bash
+# Kill any existing Gazebo processes
+pkill gz
+pkill gazebo
+
+# Clear Gazebo models cache
+rm -rf ~/.gazebo/models/*
+```
+
+#### Issue: Robot Model Not Loading Properly
+**Symptoms**: Missing meshes or incorrect robot appearance
+**Solution**:
+1. Verify URDF/XACRO files are correct
+2. Check mesh file paths and permissions
+3. Validate URDF:
+   ```bash
+   check_urdf /path/to/robot.urdf
+   ```
+
+## Module 3: AI Brain - Perception & Navigation Troubleshooting
+
+### Isaac ROS Perception Issues
+
+#### Issue: Camera Feed Not Publishing
+**Symptoms**: No image data on camera topics
+**Solution**:
+1. Check camera configuration in Isaac Sim
+2. Verify camera intrinsic/extrinsic parameters
+3. Ensure proper frame IDs:
+   ```bash
+   ros2 run tf2_tools view_frames
+   ros2 run tf2_ros tf2_echo camera_frame base_link
+   ```
+
+#### Issue: Object Detection Not Working
+**Symptoms**: No detections or poor detection accuracy
+**Solution**:
+1. Verify detection model files exist and are accessible
+2. Check input topic names match expected format
+3. Ensure proper image encoding (RGB8 vs BGR8)
+
+#### Issue: LIDAR Data Problems
+**Symptoms**: Empty or incorrect LIDAR scans
+**Solution**:
+1. Verify LIDAR sensor configuration in simulation
+2. Check scan topic format:
+   ```bash
+   ros2 topic info /scan
+   ros2 interface show sensor_msgs/msg/LaserScan
+   ```
+3. Verify frame ID and coordinate transforms
+
+### Navigation Issues
+
+#### Issue: Navigation Goals Not Achieving
+**Symptoms**: Robot fails to reach navigation goals
+**Solution**:
+1. Check Nav2 configuration files
+2. Verify costmap parameters
+3. Ensure proper localization:
+   ```bash
+   ros2 run nav2_util lifecycle_bringup navigation
+   ros2 run nav2_util lifecycle_bringup localizer
+   ```
+
+#### Issue: Costmap Not Updating
+**Symptoms**: Robot doesn't avoid dynamic obstacles
+**Solution**:
+1. Verify sensor topics are connected to costmap
+2. Check sensor frame transforms
+3. Validate costmap update frequency
+
+## Module 4: Vision-Language-Action Systems Troubleshooting
+
+### Whisper Integration Issues
+
+#### Issue: Whisper Model Not Loading
+**Symptoms**: High memory usage or model loading failure
+**Solution**:
+1. Check available system memory:
+   ```bash
+   free -h
+   # Whisper models can use 2-6GB of RAM
+   ```
+
+2. Install with proper dependencies:
+   ```bash
+   pip3 install openai-whisper
+   # For GPU acceleration:
+   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   pip3 install openai-whisper
+   ```
+
+3. Use smaller model for limited resources:
+   ```python
+   model = whisper.load_model("base")  # Instead of "large"
+   ```
+
+#### Issue: Audio Processing Problems
+**Symptoms**: Poor transcription quality or audio errors
+**Solution**:
+1. Check audio input device:
+   ```bash
+   arecord -l  # List audio devices
+   arecord -D plughw:0,0 -f cd test.wav  # Test recording
+   ```
+
+2. Verify audio format compatibility with Whisper
+
+### LLM Integration Issues
+
+#### Issue: API Connection Problems
+**Symptoms**: Connection timeouts or authentication failures
+**Solution**:
+1. Verify API key:
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   echo $OPENAI_API_KEY
+   ```
+
+2. Check network connectivity and firewall settings
+3. Implement proper error handling:
+   ```python
+   import time
+   import openai
+
+   try:
+       response = openai.ChatCompletion.create(
+           model="gpt-3.5-turbo",
+           messages=messages,
+           timeout=30
+       )
+   except openai.error.APIConnectionError:
+       time.sleep(10)  # Retry after delay
+   ```
+
+#### Issue: Rate Limiting
+**Symptoms**: API calls failing due to rate limits
+**Solution**:
+1. Implement rate limiting in your code
+2. Use appropriate model for your usage tier
+3. Check OpenAI dashboard for current usage
+
+## Capstone Project Troubleshooting
+
+### System Integration Issues
+
+#### Issue: Components Not Communicating
+**Symptoms**: Nodes not exchanging messages properly
+**Solution**:
+1. Check all topic names match between publishers/subscribers
+2. Verify ROS domain IDs are consistent
+3. Use `ros2 topic list` and `ros2 node list` to debug
+
+#### Issue: Performance Degradation
+**Symptoms**: Slow response times or system lag
+**Solution**:
+1. Monitor system resources:
+   ```bash
+   htop
+   nvidia-smi  # For GPU usage
+   ```
+
+2. Optimize processing frequencies
+3. Check for memory leaks
+
+### Safety System Issues
+
+#### Issue: Unexpected Safety Stops
+**Symptoms**: Robot stopping frequently due to safety triggers
+**Solution**:
+1. Adjust safety thresholds appropriately
+2. Verify sensor calibration
+3. Check for false obstacle detections
+
+## General Troubleshooting Tools
+
+### ROS 2 Diagnostic Commands
+```bash
+# Check all nodes
+ros2 node list
+ros2 node info <node_name>
+
+# Check all topics
+ros2 topic list
+ros2 topic info <topic_name>
+ros2 topic echo <topic_name>
+
+# Check services
+ros2 service list
+ros2 service call <service_name> <type> <request>
+
+# Check parameters
+ros2 param list
+ros2 param get <node_name> <param_name>
+```
+
+### System Monitoring
+```bash
+# Check system resources
+htop
+free -h
+df -h
+
+# Monitor ROS 2 topics
+ros2 topic hz <topic_name>
+ros2 topic bw <topic_name>
+
+# Check network connectivity
+ping google.com
+nslookup api.openai.com  # For LLM connectivity
+```
+
+## Development Environment Issues
+
+### Python Environment
+#### Issue: Package Installation Problems
+**Solution**:
+```bash
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install packages
+pip install -r requirements.txt
+```
+
+#### Issue: Mixed Python Versions
+**Solution**:
+```bash
+# Check Python version
+python3 --version
+which python3
+
+# Ensure using correct Python for ROS 2
+source /opt/ros/humble/setup.bash
+python3 -c "import sys; print(sys.executable)"
+```
+
+## Getting Help
+
+### When to Seek Help
+- Issues persist after attempting troubleshooting steps
+- Error messages are unclear or cryptic
+- Integration problems between different modules
+- Performance issues that affect system stability
+
+### Resources for Help
+- Course discussion forums
+- ROS 2 documentation and community
+- Isaac Sim documentation and support
+- Stack Overflow with appropriate tags
+
+### Information to Provide When Seeking Help
+1. **Exact error messages** (copy and paste when possible)
+2. **Steps to reproduce** the issue
+3. **Expected vs. actual behavior**
+4. **System configuration** (OS, ROS version, hardware)
+5. **Relevant code snippets** or configuration files
+6. **What troubleshooting steps** you've already tried
+
+## Preventive Measures
+
+### Regular Maintenance
+- Keep system and packages updated
+- Regular cleanup of temporary files
+- Monitor disk space and memory usage
+- Backup important configurations
+
+### Best Practices
+- Test components individually before integration
+- Use version control for code changes
+- Document configuration changes
+- Maintain clean and organized workspace
+
+## Quick Reference
+
+### Common Commands
+```bash
+# ROS 2 environment setup
+source /opt/ros/humble/setup.bash
+
+# Check ROS 2 status
+ros2 doctor
+
+# Restart ROS 2 daemon
+ros2 daemon stop && ros2 daemon start
+
+# Clear workspace build
+cd ~/ros_workspace
+rm -rf build/ install/ log/
+```
+
+### System Health Check
+```bash
+# Check system resources
+free -h && df -h && htop
+
+# Check ROS 2 connectivity
+ros2 topic list && ros2 node list
+
+# Check Isaac Sim status
+nvidia-smi
+```
+
+This troubleshooting guide covers the most common issues students may encounter. If problems persist, please consult the specific module documentation or seek assistance through the course support channels.

@@ -1,0 +1,502 @@
+openapi: 3.0.3
+info:
+  title: Physical AI & Humanoid Robotics Course API
+  description: API for educational platform supporting the Physical AI & Humanoid Robotics course
+  version: 1.0.0
+  contact:
+    name: Course Development Team
+    email: course-team@example.com
+
+servers:
+  - url: https://api.physical-ai-humanoid-course.com/v1
+    description: Production server
+  - url: https://staging.api.physical-ai-humanoid-course.com/v1
+    description: Staging server
+
+paths:
+  /modules:
+    get:
+      summary: List all course modules
+      description: Retrieve a list of all available course modules
+      tags:
+        - Modules
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of modules to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: offset
+          in: query
+          description: Number of modules to skip
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Successful response with list of modules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CourseModule'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /modules/{moduleId}:
+    get:
+      summary: Get a specific module
+      description: Retrieve details of a specific course module
+      tags:
+        - Modules
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          description: ID of the module to retrieve
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with module details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CourseModule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/topics:
+    get:
+      summary: List topics in a module
+      description: Retrieve all topics within a specific module
+      tags:
+        - Topics
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          description: ID of the module
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of topics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Topic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /modules/{moduleId}/exercises:
+    get:
+      summary: List exercises in a module
+      description: Retrieve all exercises within a specific module
+      tags:
+        - Exercises
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          description: ID of the module
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response with list of exercises
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Exercise'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /exercises/{exerciseId}/submit:
+    post:
+      summary: Submit an exercise
+      description: Submit a completed exercise for evaluation
+      tags:
+        - Exercises
+      parameters:
+        - name: exerciseId
+          in: path
+          required: true
+          description: ID of the exercise to submit
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                solution:
+                  type: string
+                  description: The solution code or content
+                metadata:
+                  type: object
+                  description: Additional submission metadata
+      responses:
+        '200':
+          description: Exercise submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/SubmissionResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /simulation/scenarios:
+    get:
+      summary: List simulation scenarios
+      description: Retrieve all available simulation scenarios
+      tags:
+        - Simulation
+      responses:
+        '200':
+          description: Successful response with list of scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SimulationScenario'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  schemas:
+    CourseModule:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - order
+        - duration
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the module
+          example: "module-1-ros-foundations"
+        title:
+          type: string
+          description: Display title of the module
+          example: "ROS 2 Foundations"
+        description:
+          type: string
+          description: Brief description of the module content
+          example: "Learn the fundamentals of ROS 2 architecture and communication"
+        order:
+          type: integer
+          description: Sequential position in the course
+          example: 1
+        duration:
+          type: number
+          description: Estimated completion time in hours
+          example: 8.5
+        learningOutcomes:
+          type: array
+          items:
+            type: string
+          description: Array of learning outcomes for the module
+          example: ["Explain ROS 2 architecture", "Build Python ROS 2 nodes"]
+        prerequisites:
+          type: array
+          items:
+            type: string
+          description: Array of prerequisite module IDs
+          example: []
+
+    Topic:
+      type: object
+      required:
+        - id
+        - moduleId
+        - title
+        - description
+        - order
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the topic
+          example: "ros2-architecture-concepts"
+        moduleId:
+          type: string
+          description: Reference to the parent module
+          example: "module-1-ros-foundations"
+        title:
+          type: string
+          description: Display title of the topic
+          example: "ROS 2 Architecture Concepts"
+        description:
+          type: string
+          description: Brief description of the topic
+          example: "Understanding nodes, topics, and services in ROS 2"
+        content:
+          type: string
+          description: Main content of the topic in MDX format
+        order:
+          type: integer
+          description: Sequential position within the module
+          example: 1
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+          description: Difficulty level of the topic
+          example: "intermediate"
+        estimatedTime:
+          type: integer
+          description: Estimated reading/learning time in minutes
+          example: 30
+
+    Exercise:
+      type: object
+      required:
+        - id
+        - moduleId
+        - title
+        - description
+        - type
+        - complexity
+        - estimatedDuration
+        - validationCriteria
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the exercise
+          example: "exercise-1-ros-node"
+        moduleId:
+          type: string
+          description: Reference to the parent module
+          example: "module-1-ros-foundations"
+        title:
+          type: string
+          description: Display title of the exercise
+          example: "Create Your First ROS 2 Node"
+        description:
+          type: string
+          description: Brief description of the exercise
+          example: "Build a simple ROS 2 node that publishes messages"
+        instructions:
+          type: string
+          description: Detailed instructions in MDX format
+        type:
+          type: string
+          enum: [coding, simulation, analysis, conceptual]
+          description: Exercise category
+          example: "coding"
+        complexity:
+          type: string
+          enum: [basic, intermediate, advanced]
+          description: Complexity level
+          example: "basic"
+        estimatedDuration:
+          type: integer
+          description: Estimated completion time in minutes
+          example: 60
+        validationCriteria:
+          type: array
+          items:
+            type: string
+          description: Criteria for successful completion
+          example: ["Node successfully publishes messages", "Code follows ROS 2 best practices"]
+
+    SimulationScenario:
+      type: object
+      required:
+        - id
+        - moduleId
+        - title
+        - description
+        - environment
+        - configuration
+        - robotModel
+        - objectives
+        - steps
+        - expectedOutcome
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the scenario
+          example: "scenario-1-basic-navigation"
+        moduleId:
+          type: string
+          description: Reference to the parent module
+          example: "module-3-ai-brain"
+        title:
+          type: string
+          description: Display title of the scenario
+          example: "Basic Navigation in Gazebo"
+        description:
+          type: string
+          description: Brief description of the scenario
+          example: "Navigate a humanoid robot through a simple obstacle course"
+        environment:
+          type: string
+          enum: [gazebo, isaac_sim, unity]
+          description: Target simulation environment
+          example: "gazebo"
+        configuration:
+          type: string
+          description: Path to configuration files
+          example: "config/basic_navigation.yaml"
+        robotModel:
+          type: string
+          description: URDF or model description to use
+          example: "models/humanoid.urdf"
+        objectives:
+          type: array
+          items:
+            type: string
+          description: Learning objectives for the scenario
+          example: ["Implement basic navigation", "Understand path planning"]
+        steps:
+          type: array
+          items:
+            type: string
+          description: Sequential steps for the scenario
+          example: ["Launch Gazebo with world", "Spawn robot", "Send navigation goal"]
+        expectedOutcome:
+          type: string
+          description: Description of expected results
+          example: "Robot successfully navigates to goal position"
+
+    SubmissionResult:
+      type: object
+      required:
+        - id
+        - exerciseId
+        - status
+        - score
+        - feedback
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the submission
+        exerciseId:
+          type: string
+          description: ID of the exercise submitted
+        status:
+          type: string
+          enum: [pending, grading, graded, failed]
+          description: Current status of the submission
+        score:
+          type: number
+          description: Score achieved on the exercise (0-100)
+        feedback:
+          type: string
+          description: Feedback provided for the submission
+
+    Pagination:
+      type: object
+      required:
+        - page
+        - perPage
+        - total
+        - totalPages
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        perPage:
+          type: integer
+          description: Number of items per page
+          example: 10
+        total:
+          type: integer
+          description: Total number of items
+          example: 50
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 5
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  parameters:
+    moduleId:
+      name: moduleId
+      in: path
+      required: true
+      description: ID of the module
+      schema:
+        type: string
+
+security:
+  - bearerAuth: []
+  - apiKey: []
+
+securityDefinitions:
+  bearerAuth:
+    type: http
+    scheme: bearer
+    bearerFormat: JWT
+  apiKey:
+    type: apiKey
+    in: header
+    name: X-API-Key

@@ -1,0 +1,93 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="simple_humanoid_world">
+    <!-- Include a ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- Include a sun -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Add physics engine -->
+    <physics name="1ms" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Place the simple humanoid model -->
+    <include>
+      <name>simple_humanoid</name>
+      <uri>model://simple_humanoid</uri>
+      <pose>0 0 1 0 0 0</pose>
+    </include>
+
+    <!-- Add a simple camera sensor -->
+    <model name="camera_sensor">
+      <pose>2 -2 1.5 0 0 1.57</pose>
+      <link name="camera_link">
+        <pose>0.05 0 0 0 0 0</pose>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.1 0.1 0.1</size>
+            </box>
+          </geometry>
+        </visual>
+        <sensor name="camera" type="camera">
+          <camera name="cam">
+            <horizontal_fov>1.047</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+        </sensor>
+      </link>
+    </model>
+
+    <!-- Add a simple cube for reference -->
+    <model name="reference_cube">
+      <pose>-1 0 0.5 0 0 0</pose>
+      <link name="cube_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+
+  </world>
+</sdf>

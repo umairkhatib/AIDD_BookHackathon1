@@ -1,0 +1,394 @@
+---
+sidebar_position: 11
+title: "Deployment Guide"
+---
+
+# Deployment Guide
+
+## Overview
+
+This document provides comprehensive instructions for deploying the Physical AI & Humanoid Robotics course website to GitHub Pages. The deployment process ensures that the course materials are available to students in a production environment.
+
+## Prerequisites
+
+### System Requirements
+- **Node.js**: Version 18.0 or higher
+- **npm**: Version 8.0 or higher
+- **Git**: Version 2.18 or higher
+- **GitHub Account**: With repository access
+
+### Repository Setup
+- **Repository**: GitHub repository configured for GitHub Pages
+- **Branch**: `gh-pages` branch for deployment (or configured branch)
+- **Permissions**: Required permissions for deployment
+- **SSH Key**: Configured for Git access (recommended)
+
+## Build Process
+
+### Local Build
+Before deploying, ensure the site builds correctly locally:
+
+```bash
+# Navigate to website directory
+cd website/
+
+# Install dependencies
+npm install
+
+# Build the site
+npm run build
+
+# Preview the build locally (optional)
+npm run serve
+```
+
+### Build Verification
+- Verify no build errors occur
+- Check that all pages render correctly
+- Test all interactive elements
+- Validate search functionality
+
+## GitHub Pages Configuration
+
+### Repository Settings
+1. Go to your repository on GitHub
+2. Navigate to **Settings** → **Pages**
+3. Configure the source:
+   - **Source**: Deploy from a branch
+   - **Branch**: Select `gh-pages` branch
+   - **Folder**: `/ (root)` or `/docs` depending on configuration
+
+### Custom Domain (Optional)
+If using a custom domain:
+1. Add CNAME record to repository's `docs/CNAME` file
+2. Configure DNS settings with your domain provider
+3. Update GitHub Pages settings to use custom domain
+
+## Deployment Process
+
+### Automated Deployment (Recommended)
+Use the automated deployment script:
+
+```bash
+# Navigate to website directory
+cd website/
+
+# Run deployment command
+npm run deploy
+```
+
+This command will:
+- Build the site
+- Push to the `gh-pages` branch
+- Trigger GitHub Pages deployment
+
+### Manual Deployment
+If deploying manually:
+
+```bash
+# Build the site
+npm run build
+
+# Create or switch to gh-pages branch
+git checkout -b gh-pages
+
+# Copy build files to root
+cp -r build/* .
+
+# Add all files
+git add .
+
+# Commit changes
+git commit -m "Deploy site - $(date)"
+
+# Push to GitHub
+git push origin gh-pages --force
+```
+
+## Deployment Configuration
+
+### Docusaurus Configuration
+Ensure `docusaurus.config.js` is properly configured for GitHub Pages:
+
+```javascript
+// docusaurus.config.js
+const config = {
+  // ...
+  url: 'https://your-username.github.io', // Production URL
+  baseUrl: '/your-repository-name/',       // Repository name
+  projectName: 'your-repository-name',    // GitHub repository name
+  organizationName: 'your-username',      // GitHub username/organization
+  // ...
+};
+```
+
+### GitHub Actions (CI/CD)
+Set up automated deployment with GitHub Actions:
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+      - name: Build website
+        run: npm run build
+
+      # Popular action to deploy to GitHub Pages:
+      # Docs: https://github.com/peaceiris/actions-gh-pages#%EF%B8%8F-docusaurus
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Build output to publish to the `gh-pages` branch:
+          publish_dir: ./build
+          # The following lines assign commit authorship to the official
+          # GH-Actions bot for deploys to `gh-pages` branch:
+          # https://github.com/actions/checkout/issues/13#issuecomment-724415212
+          # The GH actions bot is used by default if you didn't specify the two fields.
+          # You can swap them out with your own user credentials.
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+```
+
+## Pre-Deployment Checklist
+
+### Content Verification
+- [ ] All pages build without errors
+- [ ] Internal links are valid
+- [ ] Images and assets load correctly
+- [ ] Code examples are correct
+- [ ] Interactive elements function properly
+- [ ] Search functionality works
+- [ ] Navigation is intuitive and functional
+
+### Quality Assurance
+- [ ] Quality assurance process completed
+- [ ] Accessibility requirements met
+- [ ] Performance targets achieved
+- [ ] Cross-browser compatibility verified
+- [ ] Mobile responsiveness tested
+- [ ] Security best practices followed
+
+### Configuration Verification
+- [ ] Base URL configured correctly
+- [ ] Site metadata is accurate
+- [ ] Analytics configured (if applicable)
+- [ ] Search index configuration correct
+- [ ] Social sharing settings configured
+
+## Deployment Steps
+
+### Step 1: Prepare the Repository
+```bash
+# Clone repository (if not already done)
+git clone https://github.com/your-username/your-repository.git
+cd your-repository/website/
+
+# Ensure you're on the correct branch
+git checkout main
+```
+
+### Step 2: Update Dependencies
+```bash
+# Update npm packages
+npm update
+
+# Verify package integrity
+npm audit
+```
+
+### Step 3: Build and Test
+```bash
+# Clean previous build
+rm -rf build/
+
+# Build the site
+npm run build
+
+# Serve locally to test
+npm run serve
+```
+
+### Step 4: Deploy
+```bash
+# Deploy to GitHub Pages
+npm run deploy
+```
+
+## Post-Deployment Verification
+
+### Immediate Checks
+- Visit the deployed site URL
+- Verify home page loads correctly
+- Test navigation between sections
+- Confirm search functionality works
+- Verify interactive elements function
+
+### Content Verification
+- Check that all modules are accessible
+- Verify exercise and assignment links
+- Test all interactive demos
+- Confirm media assets load properly
+- Validate external links
+
+### Performance Verification
+- Check page load speeds
+- Verify mobile responsiveness
+- Test offline functionality (if applicable)
+- Monitor resource usage
+
+## Deployment Monitoring
+
+### Uptime Monitoring
+- **Status Page**: Monitor site availability
+- **Performance Metrics**: Track load times
+- **Error Tracking**: Monitor for errors
+- **User Experience**: Track user satisfaction
+
+### Analytics Setup
+- **Google Analytics**: Configure for usage tracking
+- **User Behavior**: Track user engagement
+- **Content Performance**: Monitor popular content
+- **Traffic Sources**: Track visitor sources
+
+## Rollback Procedure
+
+### In Case of Deployment Failure
+If the deployment fails or issues are found:
+
+```bash
+# Identify the last known good commit
+git log --oneline -10
+
+# Revert to previous version
+git revert --no-commit <commit-hash>
+git commit -m "Rollback to previous version"
+git push origin main
+```
+
+### Emergency Rollback
+If immediate rollback is needed:
+- Temporarily disable GitHub Pages
+- Restore from backup if available
+- Investigate and fix issues
+- Redeploy when resolved
+
+## Maintenance and Updates
+
+### Regular Maintenance
+- **Content Updates**: Regular content updates
+- **Dependency Updates**: Keep packages updated
+- **Security Patches**: Apply security updates
+- **Performance Tuning**: Optimize as needed
+
+### Update Process
+```bash
+# Pull latest changes
+git pull origin main
+
+# Update dependencies
+npm update
+
+# Build and test
+npm run build
+
+# Deploy updates
+npm run deploy
+```
+
+## Troubleshooting Common Issues
+
+### Build Failures
+**Issue**: Build fails with errors
+**Solution**:
+```bash
+# Clear cache and reinstall
+rm -rf node_modules/
+rm package-lock.json
+npm install
+npm run build
+```
+
+### Deployment Failures
+**Issue**: Deployment fails
+**Solution**:
+```bash
+# Check git status
+git status
+
+# Ensure clean working directory
+git stash  # if necessary
+
+# Retry deployment
+npm run deploy
+```
+
+### GitHub Pages Not Updating
+**Issue**: Site doesn't update after deployment
+**Solution**:
+1. Check GitHub Actions for errors
+2. Verify `gh-pages` branch was updated
+3. Clear browser cache
+4. Wait up to 10 minutes for GitHub Pages to update
+
+### Incorrect Base URL
+**Issue**: Site loads but resources are missing
+**Solution**: Verify `baseUrl` in `docusaurus.config.js`
+
+## Security Considerations
+
+### Content Security
+- **Input Validation**: Validate all user inputs
+- **Sanitization**: Sanitize content and code examples
+- **Access Control**: Restrict sensitive areas
+- **Data Protection**: Protect user data
+
+### Deployment Security
+- **Secrets Management**: Secure API keys and tokens
+- **Access Permissions**: Limit deployment access
+- **Audit Logs**: Maintain deployment logs
+- **Vulnerability Scanning**: Regular security scans
+
+## Best Practices
+
+### Deployment Best Practices
+- **Test First**: Always test locally before deploying
+- **Incremental Updates**: Deploy small, frequent updates
+- **Backup Strategy**: Maintain backup of working versions
+- **Monitoring**: Monitor site after deployment
+- **Documentation**: Keep deployment procedures documented
+
+### Maintenance Best Practices
+- **Regular Updates**: Keep dependencies current
+- **Performance Monitoring**: Continuously monitor performance
+- **User Feedback**: Act on user feedback
+- **Security Updates**: Apply security patches promptly
+- **Content Review**: Regular content quality reviews
+
+## Support and Maintenance
+
+### Contact Information
+- **Technical Support**: deployment-support@physical-ai-humanoid-course.edu
+- **Emergency Contact**: Available for critical issues
+- **Documentation**: Comprehensive documentation available
+- **Community**: Support community and forums
+
+This deployment guide ensures that the Physical AI & Humanoid Robotics course website can be reliably deployed to GitHub Pages, providing students with access to high-quality educational content.

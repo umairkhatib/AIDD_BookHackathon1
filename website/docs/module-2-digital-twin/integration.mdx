@@ -1,0 +1,487 @@
+---
+sidebar_position: 6
+title: "Simulation Examples Integration"
+---
+
+# Simulation Examples Integration
+
+## Overview
+
+This page demonstrates how to integrate the physics simulation examples provided in the Physical AI & Humanoid Robotics Course. These examples show practical implementations of Gazebo simulation, sensor integration, and environment creation.
+
+## Running the Simulation Examples
+
+### Prerequisites
+
+Before running the simulation examples, make sure you have:
+
+1. **Gazebo installed**: Gazebo Garden or compatible version
+2. **ROS 2 Humble**: Properly sourced in your environment
+3. **Course repository**: Cloned and set up properly
+
+### Environment Setup
+
+First, ensure your environment is properly configured:
+
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Navigate to the simulation examples directory
+cd simulation-examples
+```
+
+### Running Gazebo Worlds
+
+#### Indoor Office World
+
+The indoor office world provides a realistic indoor environment with furniture and obstacles:
+
+```bash
+# Launch the indoor office world
+ign gazebo simulation-examples/gazebo_worlds/indoor_office.world
+```
+
+<details>
+<summary>About the Indoor Office World</summary>
+
+The indoor office world includes:
+- Four walls forming an enclosed space
+- A desk with chair
+- A decorative plant
+- Proper lighting and physics configuration
+
+This environment is ideal for testing navigation algorithms and indoor robot behaviors.
+
+</details>
+
+#### Outdoor Park World
+
+The outdoor park world provides an open environment with terrain features:
+
+```bash
+# Launch the outdoor park world
+ign gazebo simulation-examples/gazebo_worlds/outdoor_park.world
+```
+
+<details>
+<summary>About the Outdoor Park World</summary>
+
+The outdoor park world includes:
+- Grass areas and walking paths
+- Several trees with trunks and leaves
+- Benches for seating
+- Playground equipment
+- Open space for navigation
+
+This environment is ideal for testing outdoor navigation and path planning algorithms.
+
+</details>
+
+## Sensor Simulation Examples
+
+### Running the Sensor Simulator
+
+The sensor simulator demonstrates various robot sensors:
+
+```bash
+# Navigate to the ROS 2 workspace
+cd simulation-examples/ros2-workspaces
+
+# Run the sensor simulation example
+python3 basic_nodes/sensor_simulation_example.py
+```
+
+### Available Sensor Topics
+
+Once running, the sensor simulator publishes to these topics:
+
+- **`/laser_scan`**: 2D laser scan data (LaserScan message)
+- **`/imu/data`**: Inertial measurement unit data (Imu message)
+- **`/imu/mag`**: Magnetic field data (MagneticField message)
+- **`/gps/fix`**: GPS position data (NavSatFix message)
+
+### Viewing Sensor Data
+
+To view the published sensor data:
+
+```bash
+# View laser scan data
+ros2 topic echo /laser_scan
+
+# View IMU data
+ros2 topic echo /imu/data
+
+# View GPS data
+ros2 topic echo /gps/fix
+
+# View magnetic field data
+ros2 topic echo /imu/mag
+```
+
+## Interactive Code Examples
+
+### Basic Gazebo Controller
+
+<CodeBlock title="gazebo_controller.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Basic Gazebo Controller for the Physical AI & Humanoid Robotics Course
+"""
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
+import math
+
+
+class GazeboController(Node):
+    def __init__(self):
+        super().__init__('gazebo_controller')
+
+        # Publisher for robot velocity commands
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+        # Subscriber for laser scan data
+        self.laser_sub = self.create_subscription(
+            LaserScan, '/laser_scan', self.laser_callback, 10
+        )
+
+        # Timer for control loop
+        self.timer = self.create_timer(0.1, self.control_loop)
+
+        # Robot state
+        self.obstacle_detected = False
+        self.min_distance = float('inf')
+
+        self.get_logger().info('Gazebo Controller initialized')
+
+    def laser_callback(self, msg):
+        """Process laser scan data to detect obstacles."""
+        # Find minimum distance in the forward sector
+        forward_sector = msg.ranges[len(msg.ranges)//2-30:len(msg.ranges)//2+30]
+        self.min_distance = min([d for d in forward_sector if d > 0 and d < float('inf')], default=float('inf'))
+
+        self.obstacle_detected = self.min_distance < 1.0  # 1 meter threshold
+
+        if self.obstacle_detected:
+            self.get_logger().info(f'Obstacle detected at {self.min_distance:.2f}m')
+
+    def control_loop(self):
+        """Main control loop."""
+        cmd = Twist()
+
+        if self.obstacle_detected:
+            # Stop or turn when obstacle detected
+            cmd.linear.x = 0.0
+            cmd.angular.z = 0.5  # Turn right
+        else:
+            # Move forward when clear
+            cmd.linear.x = 0.5
+            cmd.angular.z = 0.0
+
+        self.cmd_vel_pub.publish(cmd)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    controller = GazeboController()
+
+    try:
+        rclpy.spin(controller)
+    except KeyboardInterrupt:
+        controller.get_logger().info('Controller stopped by user')
+    finally:
+        controller.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+### Sensor Publisher Example
+
+<CodeBlock title="sensor_publisher.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Sensor Publisher Example for the Physical AI & Humanoid Robotics Course
+"""
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan, Imu
+from std_msgs.msg import Header
+import math
+import random
+
+
+class SensorPublisher(Node):
+    def __init__(self):
+        super().__init__('sensor_publisher')
+
+        # Publishers for different sensor types
+        self.laser_pub = self.create_publisher(LaserScan, '/laser_scan', 10)
+        self.imu_pub = self.create_publisher(Imu, '/imu/data', 10)
+
+        # Timer for sensor data publishing
+        self.timer = self.create_timer(0.1, self.publish_sensor_data)
+
+        self.get_logger().info('Sensor Publisher initialized')
+
+    def generate_laser_scan(self):
+        """Generate simulated laser scan data."""
+        msg = LaserScan()
+        msg.header = Header()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'laser_frame'
+
+        # Laser scan parameters
+        msg.angle_min = -math.pi / 2  # -90 degrees
+        msg.angle_max = math.pi / 2   # 90 degrees
+        msg.angle_increment = math.pi / 180  # 1 degree increment
+        msg.range_min = 0.1
+        msg.range_max = 10.0
+
+        # Generate ranges with some obstacles
+        num_ranges = int((msg.angle_max - msg.angle_min) / msg.angle_increment) + 1
+        msg.ranges = []
+
+        for i in range(num_ranges):
+            angle = msg.angle_min + i * msg.angle_increment
+
+            # Simulate an obstacle in front
+            if -0.5 < angle < 0.5:  # Front of robot
+                distance = 2.0 + random.uniform(-0.1, 0.1)
+            else:
+                distance = msg.range_max  # No obstacle
+
+            msg.ranges.append(distance)
+
+        return msg
+
+    def generate_imu_data(self):
+        """Generate simulated IMU data."""
+        msg = Imu()
+        msg.header = Header()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'imu_frame'
+
+        # Simulate orientation (robot is upright)
+        msg.orientation.x = 0.0
+        msg.orientation.y = 0.0
+        msg.orientation.z = 0.0
+        msg.orientation.w = 1.0
+
+        # Simulate angular velocity
+        msg.angular_velocity.x = random.uniform(-0.01, 0.01)
+        msg.angular_velocity.y = random.uniform(-0.01, 0.01)
+        msg.angular_velocity.z = random.uniform(-0.01, 0.01)
+
+        # Simulate linear acceleration (gravity)
+        msg.linear_acceleration.x = random.uniform(-0.1, 0.1)
+        msg.linear_acceleration.y = random.uniform(-0.1, 0.1)
+        msg.linear_acceleration.z = 9.81 + random.uniform(-0.1, 0.1)
+
+        return msg
+
+    def publish_sensor_data(self):
+        """Publish sensor data."""
+        # Publish laser scan
+        laser_msg = self.generate_laser_scan()
+        self.laser_pub.publish(laser_msg)
+
+        # Publish IMU data
+        imu_msg = self.generate_imu_data()
+        self.imu_pub.publish(imu_msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    publisher = SensorPublisher()
+
+    try:
+        rclpy.spin(publisher)
+    except KeyboardInterrupt:
+        publisher.get_logger().info('Sensor publisher stopped by user')
+    finally:
+        publisher.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## URDF Model Integration
+
+The course includes several URDF models that work with Gazebo simulation:
+
+### Mobile Base Model
+
+<URDFModelComponent
+  modelName="mobile_base"
+  description="A simple mobile robot base with differential drive."
+  urdfCode={`<?xml version="1.0"?>
+<!-- Mobile Base Robot Model -->
+<robot name="mobile_base">
+  <!-- Base Link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.5 0.3 0.15"/>
+      </geometry>
+      <material name="gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.5 0.3 0.15"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="0.2" ixy="0.0" ixz="0.0" iyy="0.3" iyz="0.0" izz="0.4"/>
+    </inertial>
+  </link>
+
+  <!-- Left Wheel -->
+  <link name="left_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="left_wheel"/>
+    <origin xyz="0.0 0.2 -0.05" rpy="1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+
+  <!-- Right Wheel -->
+  <link name="right_wheel">
+    <visual>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+      <material name="black">
+        <color rgba="0 0 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.1" length="0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.002"/>
+    </inertial>
+  </link>
+
+  <joint name="right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="right_wheel"/>
+    <origin xyz="0.0 -0.2 -0.05" rpy="1.5708 0 0"/>
+    <axis xyz="0 0 1"/>
+  </joint>
+</robot>`}
+/>
+
+## Integration with ROS 2
+
+### Launching Simulation with ROS 2
+
+To launch a complete simulation with ROS 2 integration:
+
+```bash
+# Terminal 1: Launch Gazebo
+ign gazebo simulation-examples/gazebo_worlds/indoor_office.world
+
+# Terminal 2: Run sensor publisher
+cd simulation-examples/ros2-workspaces
+python3 basic_nodes/sensor_simulation_example.py
+
+# Terminal 3: Run controller
+python3 your_controller_script.py
+```
+
+### Monitoring Simulation
+
+Use ROS 2 tools to monitor your simulation:
+
+```bash
+# List all topics
+ros2 topic list
+
+# Echo sensor data
+ros2 topic echo /laser_scan sensor_msgs/msg/LaserScan
+
+# Check robot state
+ros2 run rqt_robot_monitor rqt_robot_monitor
+```
+
+## Troubleshooting Common Issues
+
+### Gazebo Won't Start
+- Ensure Gazebo Garden is installed
+- Check that your graphics drivers support OpenGL
+- Verify model paths are correctly set
+
+### Sensor Data Not Publishing
+- Check that the sensor publisher is running
+- Verify topic names match between publisher and subscriber
+- Ensure ROS 2 environment is sourced
+
+### Robot Not Moving
+- Verify that velocity commands are being published
+- Check that the robot model has proper joint controllers
+- Ensure physics properties are correctly configured
+
+## Performance Tips
+
+1. **Reduce Physics Update Rate**: For faster simulation, reduce the max_step_size in world files
+2. **Simplify Models**: Use simpler collision geometries for better performance
+3. **Limit Sensor Frequency**: Reduce sensor update rates when high frequency isn't needed
+4. **Use Parallel Processing**: Run different components in separate terminals
+
+## Next Steps
+
+After mastering these simulation examples, you can:
+
+1. Create custom robot models for your specific applications
+2. Design more complex environments with multiple obstacles
+3. Implement advanced control algorithms
+4. Integrate with perception systems
+5. Prepare for real-world robot deployment
+
+## Resources
+
+- [Gazebo Documentation](https://gazebosim.org/docs)
+- [ROS 2 Gazebo Integration](https://gazebosim.org/tutorials?tut=ros2_overview)
+- [Simulation Best Practices](https://gazebosim.org/tutorials?tut=simulation_quality)

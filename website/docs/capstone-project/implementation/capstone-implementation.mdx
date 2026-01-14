@@ -1,0 +1,1731 @@
+---
+sidebar_position: 1
+title: "Capstone Project Implementation Guide"
+---
+
+# Capstone Project Implementation Guide
+
+## Overview
+
+This guide provides step-by-step instructions for implementing the autonomous humanoid robotics system that integrates all course concepts. Follow these instructions to build a complete system that demonstrates vision-language-action capabilities in simulation.
+
+## Prerequisites
+
+Before starting the implementation, ensure you have:
+
+1. **Completed All Previous Modules**:
+   - ROS 2 Fundamentals (Module 1)
+   - Digital Twin (Module 2)
+   - Perception and Navigation (Module 3)
+   - VLA Systems (Module 4)
+
+2. **System Requirements**:
+   - Ubuntu 22.04 LTS with ROS 2 Humble
+   - Isaac Sim properly installed
+   - NVIDIA GPU with CUDA support
+   - Python 3.11+ with required packages
+
+3. **Required Packages**:
+   ```bash
+   # ROS 2 packages
+   sudo apt update
+   sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup
+   sudo apt install ros-humble-isaac-*  # Isaac ROS packages
+
+   # Python packages
+   pip3 install openai-whisper
+   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   pip3 install transformers openai
+   ```
+
+## Implementation Roadmap
+
+### Phase 1: System Setup and Architecture (Days 1-2)
+- Set up development environment
+- Create system architecture framework
+- Initialize main ROS 2 nodes
+
+### Phase 2: Core Components Integration (Days 3-5)
+- Implement perception system
+- Integrate language understanding
+- Create task planning module
+- Implement control system
+
+### Phase 3: System Integration (Days 6-8)
+- Connect all components
+- Implement safety protocols
+- Test individual modules
+- Debug integration issues
+
+### Phase 4: Advanced Features and Testing (Days 9-12)
+- Implement advanced behaviors
+- Optimize performance
+- Comprehensive testing
+- Documentation and validation
+
+## Phase 1: System Setup and Architecture
+
+### 1.1 Project Structure Setup
+
+Create the project structure for your capstone implementation:
+
+```bash
+# Navigate to your project workspace
+mkdir -p ~/capstone_project_ws/src
+cd ~/capstone_project_ws
+
+# Create main package for the capstone project
+cd src
+ros2 pkg create --dependency rclpy std_msgs sensor_msgs geometry_msgs nav_msgs \
+  visualization_msgs interactive_markers \
+  capstone_humanoid_system
+
+cd ..
+colcon build --packages-select capstone_humanoid_system
+source install/setup.bash
+```
+
+### 1.2 Main Node Architecture
+
+Create the main capstone system node that will coordinate all components:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/main_capstone_node.py
+#!/usr/bin/env python3
+
+"""
+Main Capstone Node for Humanoid Robotics System
+This node coordinates all system components for the capstone project.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist, PoseStamped
+from sensor_msgs.msg import Image, LaserScan
+from visualization_msgs.msg import Marker, MarkerArray
+from interactive_markers.interactive_marker_server import InteractiveMarkerServer
+import threading
+import time
+from typing import Dict, List, Any, Optional
+
+
+class CapstoneMainNode(Node):
+    """
+    Main node that orchestrates the capstone humanoid robotics system.
+    Coordinates perception, language understanding, task planning, and control.
+    """
+
+    def __init__(self):
+        super().__init__('capstone_main_node')
+
+        # Publishers
+        self.cmd_vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.status_pub = self.create_publisher(String, '/capstone/status', 10)
+        self.visualization_pub = self.create_publisher(MarkerArray, '/capstone/visualization', 10)
+
+        # Subscribers
+        self.voice_cmd_sub = self.create_subscription(
+            String, '/capstone/voice_commands', self.voice_command_callback, 10
+        )
+        self.perception_sub = self.create_subscription(
+            String, '/capstone/perception_events', self.perception_callback, 10
+        )
+        self.sensor_subs = {
+            'camera': self.create_subscription(Image, '/camera/rgb/image_raw', self.camera_callback, 10),
+            'lidar': self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)
+        }
+
+        # Initialize system components
+        self.initialize_components()
+
+        # System state
+        self.system_state = {
+            'current_task': 'idle',
+            'last_command_time': time.time(),
+            'robot_pose': {'x': 0.0, 'y': 0.0, 'theta': 0.0},
+            'environment_map': {},
+            'active_goals': []
+        }
+
+        # Timer for system monitoring
+        self.monitor_timer = self.create_timer(1.0, self.system_monitor)
+
+        self.get_logger().info('Capstone Main Node initialized and ready')
+
+    def initialize_components(self):
+        """Initialize all system components."""
+        self.get_logger().info('Initializing system components...')
+
+        # Initialize perception component
+        self.initialize_perception()
+
+        # Initialize language understanding component
+        self.initialize_language_understanding()
+
+        # Initialize task planning component
+        self.initialize_task_planning()
+
+        # Initialize control component
+        self.initialize_control()
+
+        self.get_logger().info('All system components initialized')
+
+    def initialize_perception(self):
+        """Initialize perception system."""
+        self.get_logger().info('Initializing perception system...')
+        # In a real implementation, this would initialize:
+        # - Object detection models
+        # - SLAM systems
+        # - Sensor fusion algorithms
+        # For this example, we'll just log the initialization
+
+    def initialize_language_understanding(self):
+        """Initialize language understanding system."""
+        self.get_logger().info('Initializing language understanding system...')
+        # In a real implementation, this would initialize:
+        # - Whisper model for speech recognition
+        # - LLM for command interpretation
+        # - Natural language processing pipeline
+
+    def initialize_task_planning(self):
+        """Initialize task planning system."""
+        self.get_logger().info('Initializing task planning system...')
+        # In a real implementation, this would initialize:
+        # - Path planning algorithms
+        # - Task decomposition systems
+        # - Constraint checking modules
+
+    def initialize_control(self):
+        """Initialize control system."""
+        self.get_logger().info('Initializing control system...')
+        # In a real implementation, this would initialize:
+        # - Motion control algorithms
+        # - Trajectory generators
+        # - Safety monitoring systems
+
+    def voice_command_callback(self, msg):
+        """Process voice commands from the user."""
+        command_text = msg.data
+        self.get_logger().info(f'Received voice command: {command_text}')
+
+        # Update system state
+        self.system_state['last_command_time'] = time.time()
+
+        # Publish status update
+        status_msg = String()
+        status_msg.data = f"RECEIVED_COMMAND: {command_text}"
+        self.status_pub.publish(status_msg)
+
+        # Process the command through the pipeline
+        self.process_command_pipeline(command_text)
+
+    def perception_callback(self, msg):
+        """Process perception events."""
+        perception_data = msg.data
+        self.get_logger().info(f'Perception event: {perception_data}')
+
+        # Update environment map with perception data
+        # In a real system, this would update the world model
+
+    def camera_callback(self, msg):
+        """Process camera data."""
+        # In a real implementation, this would send camera data to perception system
+        pass
+
+    def lidar_callback(self, msg):
+        """Process LIDAR data."""
+        # In a real implementation, this would send LIDAR data to perception system
+        pass
+
+    def process_command_pipeline(self, command_text: str):
+        """Process a command through the full pipeline."""
+        self.get_logger().info(f'Processing command through pipeline: {command_text}')
+
+        # Step 1: Language Understanding
+        structured_command = self.language_understanding_process(command_text)
+        if not structured_command:
+            self.get_logger().error(f'Could not understand command: {command_text}')
+            return
+
+        # Step 2: Task Planning
+        action_sequence = self.task_planning_process(structured_command)
+        if not action_sequence:
+            self.get_logger().error(f'Could not plan actions for command: {command_text}')
+            return
+
+        # Step 3: Execute Actions
+        self.execute_action_sequence(action_sequence)
+
+    def language_understanding_process(self, command_text: str) -> Optional[Dict[str, Any]]:
+        """Process natural language command into structured command."""
+        # In a real implementation, this would use LLM to interpret the command
+        # For this example, we'll use a simple rule-based approach
+        command_lower = command_text.lower()
+
+        if 'move forward' in command_lower or 'go forward' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'move_forward',
+                'distance': 1.0,
+                'confidence': 0.9
+            }
+        elif 'turn left' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'turn_left',
+                'angle': 90,
+                'confidence': 0.85
+            }
+        elif 'turn right' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'turn_right',
+                'angle': 90,
+                'confidence': 0.85
+            }
+        elif 'go to' in command_lower:
+            # Extract location
+            for location in ['kitchen', 'living room', 'bedroom', 'office']:
+                if location in command_lower:
+                    return {
+                        'action_type': 'navigation',
+                        'action': 'navigate_to',
+                        'location': location,
+                        'confidence': 0.9
+                    }
+        elif 'stop' in command_lower or 'halt' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'stop',
+                'confidence': 0.95
+            }
+        elif 'pick up' in command_lower or 'grasp' in command_lower:
+            # Extract object
+            for obj in ['cup', 'bottle', 'book', 'box']:
+                if obj in command_lower:
+                    return {
+                        'action_type': 'manipulation',
+                        'action': 'grasp_object',
+                        'object': obj,
+                        'confidence': 0.8
+                    }
+
+        return None
+
+    def task_planning_process(self, structured_command: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
+        """Plan a sequence of actions based on the structured command."""
+        action_type = structured_command['action_type']
+        action = structured_command['action']
+
+        if action_type == 'navigation':
+            if action == 'move_forward':
+                distance = structured_command.get('distance', 1.0)
+                return [{'action': 'move_forward', 'distance': distance}]
+            elif action == 'turn_left':
+                angle = structured_command.get('angle', 90)
+                return [{'action': 'turn_left', 'angle': angle}]
+            elif action == 'turn_right':
+                angle = structured_command.get('angle', 90)
+                return [{'action': 'turn_right', 'angle': angle}]
+            elif action == 'navigate_to':
+                location = structured_command.get('location')
+                if location:
+                    return [{'action': 'navigate_to', 'location': location}]
+            elif action == 'stop':
+                return [{'action': 'stop'}]
+        elif action_type == 'manipulation':
+            if action == 'grasp_object':
+                obj = structured_command.get('object')
+                if obj:
+                    return [
+                        {'action': 'find_object', 'object': obj},
+                        {'action': 'navigate_to_object', 'object': obj},
+                        {'action': 'grasp_object', 'object': obj}
+                    ]
+
+        return None
+
+    def execute_action_sequence(self, action_sequence: List[Dict[str, Any]]):
+        """Execute a sequence of actions."""
+        self.get_logger().info(f'Executing action sequence: {action_sequence}')
+
+        for action in action_sequence:
+            action_type = action['action']
+
+            success = False
+            if action_type == 'move_forward':
+                distance = action.get('distance', 1.0)
+                success = self.execute_move_forward(distance)
+            elif action_type == 'turn_left':
+                angle = action.get('angle', 90)
+                success = self.execute_turn_left(angle)
+            elif action_type == 'turn_right':
+                angle = action.get('angle', 90)
+                success = self.execute_turn_right(angle)
+            elif action_type == 'navigate_to':
+                location = action.get('location')
+                success = self.execute_navigate_to(location)
+            elif action_type == 'stop':
+                success = self.execute_stop()
+            elif action_type == 'find_object':
+                obj = action.get('object')
+                success = self.execute_find_object(obj)
+            elif action_type == 'grasp_object':
+                obj = action.get('object')
+                success = self.execute_grasp_object(obj)
+
+            if not success:
+                self.get_logger().error(f'Action failed: {action}')
+                break
+
+    def execute_move_forward(self, distance: float) -> bool:
+        """Execute move forward action."""
+        self.get_logger().info(f'Moving forward {distance} meters')
+
+        # Check if path is clear
+        # In a real implementation, this would check sensor data
+        cmd = Twist()
+        cmd.linear.x = 0.3  # 0.3 m/s
+        cmd.angular.z = 0.0
+
+        duration = distance / 0.3
+        start_time = time.time()
+        while time.time() - start_time < duration and rclpy.ok():
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(0.05)
+
+        # Stop robot
+        self.execute_stop()
+        return True
+
+    def execute_turn_left(self, angle: float) -> bool:
+        """Execute turn left action."""
+        self.get_logger().info(f'Turning left {angle} degrees')
+
+        cmd = Twist()
+        angular_speed = 0.5  # rad/s
+        angle_rad = angle * 3.14159 / 180.0
+        duration = angle_rad / angular_speed
+
+        cmd.angular.z = angular_speed
+        start_time = time.time()
+        while time.time() - start_time < duration and rclpy.ok():
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(0.05)
+
+        # Stop robot
+        self.execute_stop()
+        return True
+
+    def execute_turn_right(self, angle: float) -> bool:
+        """Execute turn right action."""
+        self.get_logger().info(f'Turning right {angle} degrees')
+
+        cmd = Twist()
+        angular_speed = 0.5  # rad/s
+        angle_rad = angle * 3.14159 / 180.0
+        duration = angle_rad / angular_speed
+
+        cmd.angular.z = -angular_speed  # Negative for right turn
+        start_time = time.time()
+        while time.time() - start_time < duration and rclpy.ok():
+            self.cmd_vel_pub.publish(cmd)
+            time.sleep(0.05)
+
+        # Stop robot
+        self.execute_stop()
+        return True
+
+    def execute_navigate_to(self, location: str) -> bool:
+        """Execute navigate to location action."""
+        self.get_logger().info(f'Navigating to {location}')
+
+        # In a real implementation, this would use Nav2
+        # For this example, we'll just log the intent
+        # and publish a status update
+        status_msg = String()
+        status_msg.data = f"NAVIGATING_TO: {location}"
+        self.status_pub.publish(status_msg)
+        return True
+
+    def execute_stop(self) -> bool:
+        """Execute stop action."""
+        cmd = Twist()
+        cmd.linear.x = 0.0
+        cmd.linear.y = 0.0
+        cmd.linear.z = 0.0
+        cmd.angular.x = 0.0
+        cmd.angular.y = 0.0
+        cmd.angular.z = 0.0
+        self.cmd_vel_pub.publish(cmd)
+        self.get_logger().info('Robot stopped')
+        return True
+
+    def execute_find_object(self, obj: str) -> bool:
+        """Execute find object action."""
+        self.get_logger().info(f'Looking for object: {obj}')
+        # In a real implementation, this would use object detection
+        return True
+
+    def execute_grasp_object(self, obj: str) -> bool:
+        """Execute grasp object action."""
+        self.get_logger().info(f'Attempting to grasp: {obj}')
+        # In a real implementation, this would control manipulator
+        return True
+
+    def system_monitor(self):
+        """Monitor system health and status."""
+        # Check if system is responsive
+        time_since_last_command = time.time() - self.system_state['last_command_time']
+
+        # Publish system status
+        status_msg = String()
+        status_msg.data = f"SYSTEM_STATUS:active|last_cmd_age:{time_since_last_command:.1f}s|current_task:{self.system_state['current_task']}"
+        self.status_pub.publish(status_msg)
+
+        self.get_logger().debug(f'System monitor: {status_msg.data}')
+
+
+def main(args=None):
+    """Main function to run the capstone system."""
+    rclpy.init(args=args)
+
+    capstone_node = CapstoneMainNode()
+
+    try:
+        rclpy.spin(capstone_node)
+    except KeyboardInterrupt:
+        capstone_node.get_logger().info('Capstone system stopped by user')
+    finally:
+        capstone_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### 1.3 Launch File Setup
+
+Create a launch file to start the entire system:
+
+```xml
+<!-- ~/capstone_project_ws/src/capstone_humanoid_system/launch/capstone_system.launch.py -->
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        # Main capstone node
+        Node(
+            package='capstone_humanoid_system',
+            executable='main_capstone_node',
+            name='capstone_main_node',
+            output='screen',
+            parameters=[
+                # Add parameters as needed
+            ]
+        ),
+
+        # Perception node (will be implemented in Phase 2)
+        Node(
+            package='capstone_humanoid_system',
+            executable='perception_node',
+            name='capstone_perception_node',
+            output='screen'
+        ),
+
+        # Language understanding node (will be implemented in Phase 2)
+        Node(
+            package='capstone_humanoid_system',
+            executable='language_node',
+            name='capstone_language_node',
+            output='screen'
+        )
+    ])
+```
+
+## Phase 2: Core Components Integration
+
+### 2.1 Perception System Implementation
+
+Create the perception system that processes sensor data:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/perception_node.py
+#!/usr/bin/env python3
+
+"""
+Perception Node for Capstone Humanoid System
+Processes sensor data to understand the environment.
+"""
+
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image, LaserScan, PointCloud2
+from vision_msgs.msg import Detection2DArray, ObjectHypothesisWithPose
+from geometry_msgs.msg import PointStamped, PoseArray
+from std_msgs.msg import String
+from cv_bridge import CvBridge
+import numpy as np
+import math
+from typing import List, Dict, Any
+
+
+class CapstonePerceptionNode(Node):
+    def __init__(self):
+        super().__init__('capstone_perception_node')
+
+        # Create CV bridge for image processing
+        self.cv_bridge = CvBridge()
+
+        # Publishers
+        self.detection_pub = self.create_publisher(Detection2DArray, '/capstone/detections', 10)
+        self.perception_event_pub = self.create_publisher(String, '/capstone/perception_events', 10)
+        self.obstacle_map_pub = self.create_publisher(PoseArray, '/capstone/obstacle_map', 10)
+
+        # Subscribers
+        self.camera_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.camera_callback, 10
+        )
+        self.lidar_sub = self.create_subscription(
+            LaserScan, '/scan', self.lidar_callback, 10
+        )
+        self.depth_sub = self.create_subscription(
+            Image, '/camera/depth/image_raw', self.depth_callback, 10
+        )
+
+        # Perception state
+        self.latest_image = None
+        self.latest_depth = None
+        self.laser_data = None
+        self.object_detections = []
+        self.obstacle_map = []
+
+        # Timer for perception processing
+        self.perception_timer = self.create_timer(0.1, self.perception_processing_loop)
+
+        self.get_logger().info('Capstone Perception Node initialized')
+
+    def camera_callback(self, msg):
+        """Process camera image for object detection."""
+        try:
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.latest_image = cv_image
+
+            # Perform object detection
+            # In a real implementation, this would use Isaac ROS detectnet
+            # For this example, we'll simulate object detection
+            detections = self.simulate_object_detection(cv_image)
+
+            # Publish detections
+            self.publish_detections(detections)
+
+        except Exception as e:
+            self.get_logger().error(f'Error processing camera image: {e}')
+
+    def lidar_callback(self, msg):
+        """Process LIDAR data for obstacle detection."""
+        self.laser_data = msg
+
+        # Process obstacles from LIDAR data
+        obstacles = self.process_lidar_obstacles(msg)
+
+        # Update obstacle map
+        self.obstacle_map = obstacles
+
+        # Publish obstacle map
+        self.publish_obstacle_map(obstacles)
+
+    def depth_callback(self, msg):
+        """Process depth camera data."""
+        try:
+            depth_image = self.cv_bridge.imgmsg_to_cv2(msg, "32FC1")
+            self.latest_depth = depth_image
+
+            # Process depth information
+            self.process_depth_information(depth_image)
+
+        except Exception as e:
+            self.get_logger().error(f'Error processing depth image: {e}')
+
+    def simulate_object_detection(self, image):
+        """Simulate object detection for demonstration purposes."""
+        # In a real implementation, this would use Isaac ROS detection
+        # For this example, we'll return empty detections
+        return []
+
+    def process_lidar_obstacles(self, scan_msg):
+        """Process LIDAR data to detect obstacles."""
+        obstacles = []
+        angle_increment = scan_msg.angle_increment
+
+        for i, range_val in enumerate(scan_msg.ranges):
+            if 0 < range_val < 2.0:  # Valid range within 2m
+                angle = scan_msg.angle_min + i * angle_increment
+
+                # Convert polar to Cartesian
+                x = range_val * math.cos(angle)
+                y = range_val * math.sin(angle)
+
+                obstacles.append({'x': x, 'y': y, 'distance': range_val})
+
+        return obstacles
+
+    def process_depth_information(self, depth_image):
+        """Process depth information for 3D understanding."""
+        # In a real implementation, this would analyze depth data
+        # For this example, we'll just log the information
+        if depth_image is not None:
+            height, width = depth_image.shape
+            center_depth = depth_image[height//2, width//2]
+            self.get_logger().debug(f'Center depth: {center_depth:.2f}m')
+
+    def publish_detections(self, detections):
+        """Publish object detections."""
+        # Create and publish detection array
+        detection_array_msg = Detection2DArray()
+        detection_array_msg.header.stamp = self.get_clock().now().to_msg()
+        detection_array_msg.header.frame_id = 'camera_frame'
+
+        # In this example, we'll publish empty detections
+        # In a real implementation, this would contain actual detections
+        self.detection_pub.publish(detection_array_msg)
+
+    def publish_obstacle_map(self, obstacles):
+        """Publish obstacle map."""
+        obstacle_map_msg = PoseArray()
+        obstacle_map_msg.header.stamp = self.get_clock().now().to_msg()
+        obstacle_map_msg.header.frame_id = 'base_link'
+
+        for obstacle in obstacles:
+            pose = Pose()
+            pose.position.x = obstacle['x']
+            pose.position.y = obstacle['y']
+            pose.position.z = 0.0
+            obstacle_map_msg.poses.append(pose)
+
+        self.obstacle_map_pub.publish(obstacle_map_msg)
+
+    def perception_processing_loop(self):
+        """Main perception processing loop."""
+        if self.laser_data:
+            # Process LIDAR data to detect environmental changes
+            self.detect_environmental_changes()
+
+    def detect_environmental_changes(self):
+        """Detect changes in the environment."""
+        # In a real implementation, this would compare current and previous sensor data
+        # to detect environmental changes
+        pass
+
+
+def main(args=None):
+    """Main function to run the perception node."""
+    rclpy.init(args=args)
+
+    perception_node = CapstonePerceptionNode()
+
+    try:
+        rclpy.spin(perception_node)
+    except KeyboardInterrupt:
+        perception_node.get_logger().info('Perception node stopped by user')
+    finally:
+        perception_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### 2.2 Language Understanding System
+
+Create the language understanding system that processes voice commands:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/language_node.py
+#!/usr/bin/env python3
+
+"""
+Language Understanding Node for Capstone Humanoid System
+Processes natural language commands and converts to structured actions.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from sensor_msgs.msg import AudioData
+from geometry_msgs.msg import PoseStamped
+import whisper
+import json
+import threading
+import queue
+from typing import Dict, Any, Optional
+
+
+class CapstoneLanguageNode(Node):
+    def __init__(self):
+        super().__init__('capstone_language_node')
+
+        # Publishers
+        self.command_pub = self.create_publisher(String, '/capstone/structured_commands', 10)
+        self.status_pub = self.create_publisher(String, '/capstone/language_status', 10)
+
+        # Subscribers
+        self.voice_sub = self.create_subscription(
+            String, '/capstone/voice_commands', self.voice_callback, 10
+        )
+        self.text_sub = self.create_subscription(
+            String, '/capstone/text_commands', self.text_callback, 10
+        )
+
+        # Initialize Whisper model
+        self.get_logger().info('Loading Whisper model...')
+        try:
+            self.whisper_model = whisper.load_model("base")
+            self.get_logger().info('Whisper model loaded successfully')
+        except Exception as e:
+            self.get_logger().error(f'Failed to load Whisper model: {e}')
+            self.whisper_model = None
+
+        # Initialize LLM interface
+        # In a real implementation, this would connect to an LLM service
+        self.llm_connected = self.initialize_llm_interface()
+
+        # Command processing queue
+        self.command_queue = queue.Queue()
+        self.processing_thread = threading.Thread(target=self.process_commands)
+        self.processing_thread.daemon = True
+        self.processing_thread.start()
+
+        self.get_logger().info('Capstone Language Node initialized')
+
+    def initialize_llm_interface(self):
+        """Initialize connection to LLM service."""
+        # In a real implementation, this would connect to an LLM API
+        # For this example, we'll just return True to indicate readiness
+        return True
+
+    def voice_callback(self, msg):
+        """Process voice command (simulated text for this example)."""
+        # In a real implementation, this would receive audio data
+        # For this example, we'll treat it as pre-transcribed text
+        command_text = msg.data
+        self.get_logger().info(f'Received voice command: {command_text}')
+
+        # Add to processing queue
+        self.command_queue.put({
+            'type': 'voice',
+            'command': command_text,
+            'timestamp': self.get_clock().now().to_msg()
+        })
+
+    def text_callback(self, msg):
+        """Process text command."""
+        command_text = msg.data
+        self.get_logger().info(f'Received text command: {command_text}')
+
+        # Add to processing queue
+        self.command_queue.put({
+            'type': 'text',
+            'command': command_text,
+            'timestamp': self.get_clock().now().to_msg()
+        })
+
+    def process_commands(self):
+        """Process commands in a separate thread."""
+        while rclpy.ok():
+            try:
+                if not self.command_queue.empty():
+                    command_data = self.command_queue.get_nowait()
+
+                    # Process the command with language understanding
+                    structured_command = self.understand_command(command_data['command'])
+
+                    if structured_command:
+                        # Publish structured command
+                        cmd_msg = String()
+                        cmd_msg.data = json.dumps(structured_command)
+                        self.command_pub.publish(cmd_msg)
+
+                        self.get_logger().info(f'Structured command: {structured_command}')
+                    else:
+                        self.get_logger().error(f'Could not understand command: {command_data["command"]}')
+
+                        # Publish error status
+                        status_msg = String()
+                        status_msg.data = f"ERROR_UNDERSTANDING: {command_data['command']}"
+                        self.status_pub.publish(status_msg)
+
+                # Brief pause to prevent busy waiting
+                import time
+                time.sleep(0.01)
+            except queue.Empty:
+                import time
+                time.sleep(0.01)
+            except Exception as e:
+                self.get_logger().error(f'Error in command processing: {e}')
+
+    def understand_command(self, command_text: str) -> Optional[Dict[str, Any]]:
+        """Understand a natural language command and convert to structured format."""
+        self.get_logger().info(f'Understanding command: {command_text}')
+
+        # In a real implementation, this would use an LLM to interpret the command
+        # For this example, we'll use a simple rule-based approach
+
+        command_lower = command_text.lower()
+
+        # Navigation commands
+        if 'move forward' in command_lower or 'go forward' in command_lower or 'move ahead' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'move_forward',
+                'distance': 1.0,
+                'confidence': 0.9,
+                'original_command': command_text
+            }
+        elif 'move backward' in command_lower or 'go back' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'move_backward',
+                'distance': 1.0,
+                'confidence': 0.85,
+                'original_command': command_text
+            }
+        elif 'turn left' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'turn_left',
+                'angle': 90,
+                'confidence': 0.9,
+                'original_command': command_text
+            }
+        elif 'turn right' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'turn_right',
+                'angle': 90,
+                'confidence': 0.9,
+                'original_command': command_text
+            }
+        elif 'stop' in command_lower or 'halt' in command_lower:
+            return {
+                'action_type': 'navigation',
+                'action': 'stop',
+                'confidence': 0.95,
+                'original_command': command_text
+            }
+        elif 'go to' in command_lower:
+            # Extract location from command
+            locations = ['kitchen', 'living room', 'bedroom', 'office', 'dining room', 'bathroom']
+            for location in locations:
+                if location in command_lower:
+                    return {
+                        'action_type': 'navigation',
+                        'action': 'navigate_to',
+                        'location': location,
+                        'confidence': 0.8,
+                        'original_command': command_text
+                    }
+        elif 'pick up' in command_lower or 'grasp' in command_lower or 'get' in command_lower:
+            # Extract object from command
+            objects = ['cup', 'bottle', 'book', 'box', 'apple', 'banana', 'toy', 'pen']
+            for obj in objects:
+                if obj in command_lower:
+                    return {
+                        'action_type': 'manipulation',
+                        'action': 'grasp_object',
+                        'object': obj,
+                        'confidence': 0.75,
+                        'original_command': command_text
+                    }
+        elif 'bring' in command_lower or 'fetch' in command_lower:
+            # More complex command - find object and bring to user
+            objects = ['coffee', 'water', 'book', 'snack']
+            for obj in objects:
+                if obj in command_lower:
+                    return {
+                        'action_type': 'complex_task',
+                        'actions': [
+                            {'action': 'find_object', 'object': obj},
+                            {'action': 'grasp_object', 'object': obj},
+                            {'action': 'navigate_to', 'location': 'user'},
+                            {'action': 'release_object', 'object': obj}
+                        ],
+                        'confidence': 0.7,
+                        'original_command': command_text
+                    }
+
+        # If no specific command recognized, return None
+        return None
+
+    def process_with_llm(self, command_text: str) -> Optional[Dict[str, Any]]:
+        """Process command with LLM for more sophisticated understanding."""
+        # In a real implementation, this would call an LLM API
+        # For this example, we'll return None to fall back to rule-based processing
+        return None
+
+
+def main(args=None):
+    """Main function to run the language understanding node."""
+    rclpy.init(args=args)
+
+    language_node = CapstoneLanguageNode()
+
+    try:
+        rclpy.spin(language_node)
+    except KeyboardInterrupt:
+        language_node.get_logger().info('Language node stopped by user')
+    finally:
+        language_node.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### 2.3 Update Package Configuration
+
+Update the package.xml file to include dependencies:
+
+```xml
+<!-- ~/capstone_project_ws/src/capstone_humanoid_system/package.xml -->
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>capstone_humanoid_system</name>
+  <version>0.1.0</version>
+  <description>Capstone project for humanoid robotics system</description>
+  <maintainer email="student@physical-ai-humanoid-course.edu">Student</maintainer>
+  <license>Apache-2.0</license>
+
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>visualization_msgs</depend>
+  <depend>interactive_markers</depend>
+  <depend>cv_bridge</depend>
+  <depend>vision_msgs</depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
+```
+
+And update the setup.py file:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/setup.py
+from setuptools import setup
+import os
+from glob import glob
+
+package_name = 'capstone_humanoid_system'
+
+setup(
+    name=package_name,
+    version='0.1.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        # Include all launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py'))
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='Student',
+    maintainer_email='student@physical-ai-humanoid-course.edu',
+    description='Capstone project for humanoid robotics system',
+    license='Apache-2.0',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'main_capstone_node = capstone_humanoid_system.main_capstone_node:main',
+            'perception_node = capstone_humanoid_system.perception_node:main',
+            'language_node = capstone_humanoid_system.language_node:main',
+        ],
+    },
+)
+```
+
+## Phase 3: System Integration
+
+### 3.1 Integration Testing
+
+Create a simple test to verify all components work together:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/test_integration.py
+#!/usr/bin/env python3
+
+"""
+Integration Test for Capstone Humanoid System
+Verifies that all components work together correctly.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+import time
+
+
+class IntegrationTester(Node):
+    def __init__(self):
+        super().__init__('integration_tester')
+
+        # Publishers to test the system
+        self.voice_cmd_pub = self.create_publisher(String, '/capstone/voice_commands', 10)
+        self.status_sub = self.create_subscription(
+            String, '/capstone/status', self.status_callback, 10
+        )
+        self.cmd_vel_sub = self.create_subscription(
+            Twist, '/cmd_vel', self.cmd_vel_callback, 10
+        )
+
+        # Test state
+        self.test_results = {}
+        self.current_test = 0
+        self.tests_completed = False
+
+        # Timer for running tests
+        self.test_timer = self.create_timer(2.0, self.run_next_test)
+
+        self.get_logger().info('Integration Tester initialized')
+
+    def status_callback(self, msg):
+        """Monitor system status during tests."""
+        self.get_logger().info(f'System status: {msg.data}')
+        # Log status for analysis
+
+    def cmd_vel_callback(self, msg):
+        """Monitor robot commands during tests."""
+        self.get_logger().info(f'Robot command: linear.x={msg.linear.x}, angular.z={msg.angular.z}')
+        # Verify that commands are being generated properly
+
+    def run_next_test(self):
+        """Run the next integration test."""
+        if self.tests_completed:
+            return
+
+        tests = [
+            self.test_basic_communication,
+            self.test_voice_command_processing,
+            self.test_navigation_command,
+            self.test_system_responsiveness
+        ]
+
+        if self.current_test < len(tests):
+            self.get_logger().info(f'Running test {self.current_test + 1}: {tests[self.current_test].__name__}')
+            tests[self.current_test]()
+            self.current_test += 1
+        else:
+            self.tests_completed = True
+            self.get_logger().info('All integration tests completed')
+
+    def test_basic_communication(self):
+        """Test basic ROS 2 communication."""
+        # Send a simple status message to verify communication
+        status_msg = String()
+        status_msg.data = "INTEGRATION_TEST:basic_communication"
+        # This would be sent to a test topic in a real system
+
+    def test_voice_command_processing(self):
+        """Test voice command processing pipeline."""
+        # Send a voice command to the system
+        cmd_msg = String()
+        cmd_msg.data = "move forward 1 meter"
+        self.voice_cmd_pub.publish(cmd_msg)
+        self.get_logger().info('Sent voice command: "move forward 1 meter"')
+
+    def test_navigation_command(self):
+        """Test navigation command execution."""
+        # Send a navigation command
+        cmd_msg = String()
+        cmd_msg.data = "go to kitchen"
+        self.voice_cmd_pub.publish(cmd_msg)
+        self.get_logger().info('Sent navigation command: "go to kitchen"')
+
+    def test_system_responsiveness(self):
+        """Test overall system responsiveness."""
+        # Send multiple commands in sequence
+        commands = [
+            "turn left 90 degrees",
+            "move forward 0.5 meters",
+            "turn right 45 degrees"
+        ]
+
+        for cmd in commands:
+            cmd_msg = String()
+            cmd_msg.data = cmd
+            self.voice_cmd_pub.publish(cmd_msg)
+            self.get_logger().info(f'Sent command: "{cmd}"')
+            time.sleep(0.5)  # Brief pause between commands
+
+
+def main(args=None):
+    """Main function to run integration tests."""
+    rclpy.init(args=args)
+
+    tester = IntegrationTester()
+
+    # Run tests for a specified duration
+    start_time = time.time()
+    duration = 30  # seconds
+
+    while time.time() - start_time < duration and rclpy.ok():
+        rclpy.spin_once(tester, timeout_sec=0.1)
+
+    tester.get_logger().info('Integration testing completed')
+    tester.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### 3.2 Isaac Sim Integration
+
+Create an Isaac Sim scene that integrates with the ROS 2 system:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/isaac_integration.py
+#!/usr/bin/env python3
+
+"""
+Isaac Sim Integration for Capstone Humanoid System
+This module demonstrates how to integrate the capstone system with Isaac Sim.
+"""
+
+import carb
+import omni
+from omni.isaac.core import World
+from omni.isaac.core.utils.stage import add_reference_to_stage
+from omni.isaac.core.utils.prims import create_prim
+from omni.isaac.core.robots import Robot
+from omni.isaac.core.objects import DynamicCuboid
+from omni.isaac.sensor import Camera, RotatingLidarSensor
+from pxr import Gf, UsdGeom, Sdf
+import numpy as np
+import threading
+import time
+
+
+class IsaacCapstoneIntegration:
+    def __init__(self):
+        # Initialize Isaac Sim world
+        self.world = World(stage_units_in_meters=1.0)
+
+        # Robot configuration
+        self.robot_position = np.array([0.0, 0.0, 0.2])
+        self.robot_orientation = np.array([0.0, 0.0, 0.0, 1.0])
+
+        # Scene configuration
+        self.room_size = 10.0  # meters
+
+        self.get_logger().info('Isaac Sim Capstone Integration initialized')
+
+    def setup_isaac_scene(self):
+        """Set up the Isaac Sim scene for capstone testing."""
+        self.get_logger().info('Setting up Isaac Sim scene...')
+
+        # Add ground plane
+        self.world.scene.add_default_ground_plane()
+
+        # Create room boundaries
+        self._create_room_boundaries()
+
+        # Add obstacles for navigation testing
+        self._add_navigation_obstacles()
+
+        # Add a simple robot
+        self._add_robot()
+
+        # Add sensors to the robot
+        self._add_robot_sensors()
+
+        self.get_logger().info('Isaac Sim scene setup complete')
+
+    def _create_room_boundaries(self):
+        """Create walls for the room."""
+        wall_thickness = 0.2
+        wall_height = 2.0
+        room_half = self.room_size / 2.0
+
+        walls = [
+            {"name": "NorthWall", "pos": [0, room_half, wall_height/2], "rotation": [0.707, 0, 0, 0.707]},
+            {"name": "SouthWall", "pos": [0, -room_half, wall_height/2], "rotation": [0.707, 0, 0, 0.707]},
+            {"name": "EastWall", "pos": [room_half, 0, wall_height/2], "rotation": [0.707, 0, 0.707, 0]},
+            {"name": "WestWall", "pos": [-room_half, 0, wall_height/2], "rotation": [0.707, 0, 0.707, 0]}
+        ]
+
+        for wall in walls:
+            create_prim(
+                prim_path=f"/World/{wall['name']}",
+                prim_type="Cylinder",  # Using cylinder with rotation to create walls
+                position=np.array(wall['pos']),
+                orientation=np.array(wall['rotation']),
+                scale=np.array([wall_thickness, self.room_size, wall_height]),
+                attributes={"radius": wall_thickness/2, "height": wall_height}
+            )
+
+    def _add_navigation_obstacles(self):
+        """Add obstacles for navigation testing."""
+        obstacles = [
+            {"name": "Obstacle1", "pos": [2, 1, 0.3], "size": 0.4, "color": [0.8, 0.2, 0.2]},
+            {"name": "Obstacle2", "pos": [-2, -1, 0.3], "size": 0.5, "color": [0.2, 0.8, 0.2]},
+            {"name": "Obstacle3", "pos": [0, 2, 0.4], "size": 0.3, "color": [0.2, 0.2, 0.8]}
+        ]
+
+        for i, obs in enumerate(obstacles):
+            self.world.scene.add(
+                DynamicCuboid(
+                    prim_path=f"/World/Obstacle_{i+1}",
+                    name=f"obstacle_{i+1}",
+                    position=np.array(obs["pos"]),
+                    size=obs["size"],
+                    color=np.array(obs["color"])
+                )
+            )
+
+    def _add_robot(self):
+        """Add a robot to the scene."""
+        # In a real implementation, you would add a proper robot model
+        # For this example, we'll use a simple cuboid to represent the robot
+        robot = self.world.scene.add(
+            DynamicCuboid(
+                prim_path="/World/Robot",
+                name="capstone_robot",
+                position=self.robot_position,
+                size=0.3,
+                color=np.array([0.1, 0.8, 0.1])  # Green color
+            )
+        )
+
+    def _add_robot_sensors(self):
+        """Add sensors to the robot."""
+        # Add a camera to the robot
+        camera = Camera(
+            prim_path="/World/Robot/Camera",
+            position=np.array([0.2, 0, 0.1]),  # Position in front and slightly above
+            frequency=30,
+            resolution=(640, 480)
+        )
+
+        # Add a LIDAR sensor to the robot
+        lidar = RotatingLidarSensor(
+            prim_path="/World/Robot/Lidar",
+            translation=np.array([0.2, 0, 0.2]),  # On top of robot
+            name="RobotLidar",
+            fov=360,
+            horizontal_resolution=1,
+            vertical_resolution=16,
+            range=10,
+            rotation_frequency=20,
+            points_per_second=50000
+        )
+
+    def run_simulation(self, num_steps=1000):
+        """Run the Isaac Sim simulation."""
+        self.get_logger().info(f'Running Isaac Sim for {num_steps} steps...')
+
+        self.world.reset()
+
+        for i in range(num_steps):
+            self.world.step(render=True)
+
+            # Print progress periodically
+            if i % 200 == 0:
+                self.get_logger().info(f'Isaac Sim step: {i}')
+
+                # In a real implementation, you would:
+                # - Collect sensor data from Isaac Sim
+                # - Pass it to the ROS 2 system
+                # - Receive commands from ROS 2 system
+                # - Apply commands to Isaac Sim robot
+
+        self.get_logger().info('Isaac Sim simulation completed!')
+
+    def get_logger(self):
+        """Simple logger for this class."""
+        class Logger:
+            def info(self, msg):
+                print(f'[INFO] {msg}')
+            def warn(self, msg):
+                print(f'[WARN] {msg}')
+            def error(self, msg):
+                print(f'[ERROR] {msg}')
+        return Logger()
+
+
+def main():
+    """Main function to run Isaac Sim integration."""
+    integration = IsaacCapstoneIntegration()
+
+    try:
+        integration.setup_isaac_scene()
+        integration.run_simulation()
+    except Exception as e:
+        integration.get_logger().error(f'Error in Isaac Sim integration: {e}')
+    finally:
+        # Clean up
+        integration.world.clear()
+        integration.get_logger().info('Isaac Sim integration cleaned up')
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## Phase 4: Advanced Features and Testing
+
+### 4.1 Safety and Error Handling
+
+Implement safety checks and error handling:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/safety_manager.py
+#!/usr/bin/env python3
+
+"""
+Safety Manager for Capstone Humanoid System
+Implements safety checks and error handling for the system.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist, Pose
+from sensor_msgs.msg import LaserScan
+from builtin_interfaces.msg import Time
+import time
+from enum import Enum
+from typing import Dict, Any, List
+
+
+class SafetyLevel(Enum):
+    SAFE = 1
+    WARNING = 2
+    DANGER = 3
+    EMERGENCY_STOP = 4
+
+
+class SafetyManager(Node):
+    def __init__(self):
+        super().__init__('safety_manager')
+
+        # Publishers
+        self.safety_status_pub = self.create_publisher(String, '/capstone/safety_status', 10)
+        self.emergency_stop_pub = self.create_publisher(String, '/capstone/emergency_stop', 10)
+
+        # Subscribers
+        self.cmd_vel_sub = self.create_subscription(
+            Twist, '/cmd_vel', self.cmd_vel_callback, 10
+        )
+        self.laser_sub = self.create_subscription(
+            LaserScan, '/scan', self.laser_callback, 10
+        )
+        self.system_status_sub = self.create_subscription(
+            String, '/capstone/status', self.system_status_callback, 10
+        )
+
+        # Safety state
+        self.safety_level = SafetyLevel.SAFE
+        self.last_cmd_time = time.time()
+        self.cmd_timeout = 5.0  # seconds
+        self.obstacle_distances = []
+        self.safe_distance = 0.5  # meters
+
+        # Timer for safety monitoring
+        self.safety_timer = self.create_timer(0.1, self.safety_monitor)
+
+        self.get_logger().info('Safety Manager initialized')
+
+    def cmd_vel_callback(self, msg):
+        """Monitor velocity commands for safety."""
+        self.last_cmd_time = time.time()
+
+        # Check if command is within safe limits
+        linear_speed = (msg.linear.x**2 + msg.linear.y**2 + msg.linear.z**2)**0.5
+        angular_speed = (msg.angular.x**2 + msg.angular.y**2 + msg.angular.z**2)**0.5
+
+        if linear_speed > 1.0:  # 1 m/s maximum
+            self.get_logger().warn(f'Dangerous linear speed detected: {linear_speed:.2f} m/s')
+            self.trigger_safety_response('HIGH_LINEAR_SPEED')
+
+        if angular_speed > 1.0:  # 1 rad/s maximum
+            self.get_logger().warn(f'Dangerous angular speed detected: {angular_speed:.2f} rad/s')
+            self.trigger_safety_response('HIGH_ANGULAR_SPEED')
+
+    def laser_callback(self, msg):
+        """Process LIDAR data for obstacle detection."""
+        if msg.ranges:
+            # Get front sector readings (±30 degrees)
+            front_start = len(msg.ranges) // 2 - 30
+            front_end = len(msg.ranges) // 2 + 30
+
+            if front_start < 0:
+                front_start = 0
+            if front_end > len(msg.ranges):
+                front_end = len(msg.ranges)
+
+            front_ranges = msg.ranges[front_start:front_end]
+            self.obstacle_distances = [r for r in front_ranges if 0 < r < float('inf')]
+
+    def system_status_callback(self, msg):
+        """Monitor system status for safety issues."""
+        status_text = msg.data.lower()
+
+        if 'error' in status_text or 'emergency' in status_text:
+            self.get_logger().warn(f'System reported error: {status_text}')
+            self.trigger_safety_response('SYSTEM_ERROR_REPORTED')
+
+    def safety_monitor(self):
+        """Main safety monitoring loop."""
+        current_time = time.time()
+
+        # Check for command timeout
+        if current_time - self.last_cmd_time > self.cmd_timeout:
+            self.get_logger().warn('Command timeout detected')
+            self.trigger_safety_response('COMMAND_TIMEOUT')
+
+        # Check for obstacles
+        if self.obstacle_distances:
+            min_distance = min(self.obstacle_distances)
+            if min_distance < self.safe_distance:
+                self.get_logger().warn(f'Obstacle too close: {min_distance:.2f}m')
+                self.trigger_safety_response('OBSTACLE_TOO_CLOSE')
+
+        # Publish current safety status
+        status_msg = String()
+        status_msg.data = f"SAFETY_LEVEL:{self.safety_level.name}|OBSTACLE_MIN_DIST:{min(self.obstacle_distances) if self.obstacle_distances else 'INF'}m"
+        self.safety_status_pub.publish(status_msg)
+
+    def trigger_safety_response(self, reason: str):
+        """Trigger appropriate safety response based on the issue."""
+        if self.safety_level != SafetyLevel.EMERGENCY_STOP:
+            self.get_logger().error(f'Safety issue detected: {reason}')
+
+            # Increase safety level based on severity
+            if 'HIGH_' in reason or 'OBSTACLE' in reason:
+                self.safety_level = SafetyLevel.DANGER
+            elif 'TIMEOUT' in reason:
+                self.safety_level = SafetyLevel.WARNING
+            else:
+                self.safety_level = SafetyLevel.DANGER
+
+            # If in danger, trigger emergency stop
+            if self.safety_level in [SafetyLevel.DANGER, SafetyLevel.EMERGENCY_STOP]:
+                self.emergency_stop()
+                self.safety_level = SafetyLevel.EMERGENCY_STOP
+
+    def emergency_stop(self):
+        """Execute emergency stop procedure."""
+        self.get_logger().error('EMERGENCY STOP TRIGGERED')
+
+        # Publish emergency stop command
+        stop_msg = String()
+        stop_msg.data = "EMERGENCY_STOP"
+        self.emergency_stop_pub.publish(stop_msg)
+
+        # Stop any ongoing motion (in a real system, you might send zero velocities to all controllers)
+        stop_cmd = Twist()
+        stop_cmd.linear.x = 0.0
+        stop_cmd.linear.y = 0.0
+        stop_cmd.linear.z = 0.0
+        stop_cmd.angular.x = 0.0
+        stop_cmd.angular.y = 0.0
+        stop_cmd.angular.z = 0.0
+
+        # In a real system, you might have a direct connection to stop all motion
+        # For this example, we'll just log the action
+        self.get_logger().info('Motion stopped for safety')
+
+    def reset_safety(self):
+        """Reset safety state after issue is resolved."""
+        self.get_logger().info('Safety system reset')
+        self.safety_level = SafetyLevel.SAFE
+
+
+def main(args=None):
+    """Main function to run the safety manager."""
+    rclpy.init(args=args)
+
+    safety_manager = SafetyManager()
+
+    try:
+        rclpy.spin(safety_manager)
+    except KeyboardInterrupt:
+        safety_manager.get_logger().info('Safety manager stopped by user')
+    finally:
+        safety_manager.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### 4.2 Performance Optimization
+
+Add performance monitoring to the system:
+
+```python
+# ~/capstone_project_ws/src/capstone_humanoid_system/capstone_humanoid_system/performance_monitor.py
+#!/usr/bin/env python3
+
+"""
+Performance Monitor for Capstone Humanoid System
+Monitors system performance and resource usage.
+"""
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+import psutil
+import time
+from typing import Dict, Any
+
+
+class PerformanceMonitor(Node):
+    def __init__(self):
+        super().__init__('performance_monitor')
+
+        # Publisher for performance metrics
+        self.performance_pub = self.create_publisher(String, '/capstone/performance_metrics', 10)
+
+        # Monitor system resources
+        self.cpu_percent = 0
+        self.memory_percent = 0
+        self.disk_usage = 0
+
+        # Timer for performance monitoring
+        self.monitor_timer = self.create_timer(1.0, self.monitor_performance)
+
+        self.get_logger().info('Performance Monitor initialized')
+
+    def monitor_performance(self):
+        """Monitor system performance metrics."""
+        # Get system metrics
+        self.cpu_percent = psutil.cpu_percent(interval=1)
+        self.memory_percent = psutil.virtual_memory().percent
+        self.disk_usage = psutil.disk_usage('/').percent
+
+        # Create performance metrics message
+        metrics_msg = String()
+        metrics_msg.data = f"CPU:{self.cpu_percent}%|MEM:{self.memory_percent}%|DISK:{self.disk_usage}%"
+
+        self.performance_pub.publish(metrics_msg)
+
+        # Log warnings if resources are high
+        if self.cpu_percent > 80:
+            self.get_logger().warn(f'High CPU usage: {self.cpu_percent}%')
+        if self.memory_percent > 85:
+            self.get_logger().warn(f'High memory usage: {self.memory_percent}%')
+        if self.disk_usage > 90:
+            self.get_logger().warn(f'High disk usage: {self.disk_usage}%')
+
+        self.get_logger().debug(f'Performance: {metrics_msg.data}')
+
+
+def main(args=None):
+    """Main function to run the performance monitor."""
+    rclpy.init(args=args)
+
+    perf_monitor = PerformanceMonitor()
+
+    try:
+        rclpy.spin(perf_monitor)
+    except KeyboardInterrupt:
+        perf_monitor.get_logger().info('Performance monitor stopped by user')
+    finally:
+        perf_monitor.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Testing the Complete System
+
+### Running the Full System
+
+To test the complete capstone system:
+
+```bash
+# Terminal 1: Source ROS 2 and build the workspace
+cd ~/capstone_project_ws
+source /opt/ros/humble/setup.bash
+colcon build --packages-select capstone_humanoid_system
+source install/setup.bash
+
+# Terminal 2: Launch the main system
+ros2 launch capstone_humanoid_system capstone_system.launch.py
+
+# Terminal 3: Send test commands
+echo "move forward 1 meter" | ros2 topic pub /capstone/voice_commands std_msgs/String "data: 'move forward 1 meter'"
+
+# Monitor the system
+ros2 topic echo /capstone/status
+ros2 topic echo /cmd_vel
+```
+
+### Expected Outcomes
+
+After completing this implementation guide, students should have:
+
+1. **A working ROS 2 node system** that processes natural language commands
+2. **Integration with Isaac Sim** for simulation testing
+3. **Safety mechanisms** to ensure safe operation
+4. **Performance monitoring** to track system health
+5. **Documentation and examples** for extending the system
+
+## Troubleshooting Common Issues
+
+### Issue 1: LLM Connection Problems
+**Symptoms**: Language understanding node fails to process commands
+**Solutions**:
+1. Verify LLM API key and connectivity
+2. Check network settings and firewall
+3. Ensure proper rate limiting to avoid exceeding quotas
+
+### Issue 2: Isaac Sim Integration Issues
+**Symptoms**: Isaac Sim doesn't respond to ROS 2 commands
+**Solutions**:
+1. Verify Isaac Sim is running with ROS bridge enabled
+2. Check topic names and message types
+3. Ensure proper coordinate frame transformations
+
+### Issue 3: Performance Issues
+**Symptoms**: System is slow to respond to commands
+**Solutions**:
+1. Optimize LLM usage with caching
+2. Reduce unnecessary processing in loops
+3. Check hardware resources and optimize as needed
+
+## Next Steps
+
+After successfully implementing this capstone system, students should be prepared to:
+
+1. **Extend the system** with additional capabilities
+2. **Integrate with real hardware** (when available)
+3. **Develop specialized applications** for specific use cases
+4. **Participate in the capstone project evaluation**

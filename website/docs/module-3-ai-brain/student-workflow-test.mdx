@@ -1,0 +1,349 @@
+---
+sidebar_position: 8
+title: "Student Workflow Test - Perception and Navigation"
+---
+
+# Student Workflow Test - Perception and Navigation
+
+## Overview
+
+This document outlines the complete student workflow for the Perception and Navigation module (Module 3). It serves as both a testing guide to verify the module works as intended and a student tutorial for completing the module successfully.
+
+## Prerequisites
+
+Before starting this module, students should have completed:
+
+1. **Module 1: ROS 2 Fundamentals** - Understanding of nodes, topics, and basic ROS 2 concepts
+2. **Module 2: Digital Twin** - Experience with Gazebo simulation and physics
+3. **System Requirements Met**:
+   - Ubuntu 22.04 LTS (or WSL2 on Windows)
+   - 16GB+ RAM
+   - NVIDIA GPU with CUDA support (for Isaac tools)
+   - Isaac Sim installed and configured
+   - ROS 2 Humble Hawksbill properly configured
+   - Isaac ROS packages installed
+
+4. **Course Repository Cloned**:
+   ```bash
+   git clone https://github.com/[organization]/physical-ai-humanoid-course.git
+   cd physical-ai-humanoid-course
+   ```
+
+## Step 1: Environment Setup and Verification
+
+### 1.1 Verify Isaac Sim Installation
+```bash
+# Check Isaac Sim availability
+python3 -c "import omni.isaac.core; print('Isaac Sim available')"
+```
+
+**Expected Outcome**: Should print "Isaac Sim available" without errors.
+
+### 1.2 Verify Isaac ROS Installation
+```bash
+# Check for Isaac ROS packages
+ros2 pkg list | grep isaac
+```
+
+**Expected Outcome**: Should show Isaac ROS packages in the list.
+
+### 1.3 Navigate to Perception Examples
+```bash
+# Go to perception examples directory
+cd simulation-examples/python-scripts
+ls -la
+```
+
+**Expected Outcome**: Should show perception pipeline examples.
+
+## Step 2: Learn Perception and Navigation Concepts
+
+### 2.1 Study Core Concepts
+Read through the following materials in order:
+
+1. [Perception and Navigation Concepts](./concepts/perception-navigation.mdx)
+2. [Isaac Sim/Nav2 Integration Architecture](./architecture/isaac-nav2-integration.mdx)
+3. [Isaac Tools Implementation Examples](./implementation/isaac-tools-examples.mdx)
+
+### 2.2 Verify Understanding
+After reading each section, students should be able to:
+- Explain the components of a perception pipeline
+- Describe how Isaac Sim and Nav2 integrate
+- Understand the architecture of navigation systems
+- Identify key parameters for perception and navigation
+
+## Step 3: Hands-On Practice with Isaac Tools
+
+### 3.1 Run Isaac Sim Scene Examples
+```bash
+# Navigate to Isaac Sim scenes directory
+cd simulation-examples/isaac-sim-scenes/basic_navigation
+
+# Launch Isaac Sim with the navigation scene
+# This would typically be launched through Isaac Sim interface
+# For this example, we'll use the Python script
+python3 scene_config.py
+```
+
+**Expected Outcome**: Isaac Sim should launch with the navigation scene loaded.
+
+### 3.2 Run Perception Pipeline Example
+```bash
+# Navigate to perception examples
+cd simulation-examples/python-scripts
+
+# Run the perception pipeline example
+python3 perception_pipeline.py
+```
+
+**Expected Outcome**: The perception pipeline should start and begin processing sensor data.
+
+### 3.3 Run Nav2 Navigation Example
+```bash
+# Navigate to ROS 2 workspaces
+cd simulation-examples/ros2-workspaces
+
+# Run the Nav2 navigation example
+python3 basic_nodes/nav2_examples.py
+```
+
+**Expected Outcome**: The navigation examples should run, demonstrating various navigation patterns.
+
+### 3.4 Run Localization Example
+```bash
+# Navigate to localization examples
+cd simulation-examples/python-scripts
+
+# Run the localization example
+python3 localization_examples.py
+```
+
+**Expected Outcome**: The localization system should run, demonstrating particle filter or other localization methods.
+
+## Step 4: Complete Hands-On Exercises
+
+### 4.1 Basic Perception Exercise
+Follow the exercises in [Navigation Exercises](./exercises/navigation-exercises.mdx):
+
+1. **Exercise 1**: Set up and run a basic navigation system using Nav2
+2. **Exercise 2**: Create a perception-based navigation system
+3. **Exercise 3**: Implement SLAM and navigation integration
+4. **Exercise 4**: Set up multi-robot navigation coordination
+5. **Exercise 5**: Implement perception pipeline with Isaac tools
+6. **Exercise 6**: Create optimized path planning algorithm
+
+### 4.2 Verification Steps
+After completing each exercise:
+```bash
+# Test navigation in simulation
+ros2 launch nav2_bringup navigation_launch.py
+
+# Send navigation goals
+ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {pose: {position: {x: 2.0, y: 2.0, z: 0.0}, orientation: {w: 1.0}}, header: {frame_id: 'map'}}}"
+
+# Monitor perception data
+ros2 topic echo /perception/detections
+
+# Check localization accuracy
+ros2 topic echo /amcl_pose
+```
+
+## Step 5: Isaac Tools Integration
+
+### 5.1 Isaac Sim Scene Configuration
+Work through the examples in [Isaac Tools Integration](./integration.mdx):
+
+- Run the Isaac Sim setup examples
+- Configure sensors in Isaac Sim
+- Integrate with ROS 2 navigation
+- Test perception pipeline integration
+
+### 5.2 Isaac ROS Perception
+Test the Isaac ROS perception pipeline:
+
+```bash
+# Launch Isaac ROS perception pipeline
+ros2 launch isaac_ros_apriltag isaac_ros_apriltag.launch.py
+
+# Or launch other Isaac ROS perception packages
+ros2 launch isaac_ros_detectnet isaac_ros_detectnet.launch.py
+```
+
+**Expected Outcome**: Should see perception results being published to appropriate topics.
+
+## Step 6: Integration and Documentation
+
+### 6.1 Use Interactive Examples
+Work through the examples in [Isaac Tools Integration](./integration.mdx):
+
+- Run the provided code examples
+- Experiment with different parameters
+- Verify that the documentation examples work as described
+
+### 6.2 Create Your Own Perception System
+Based on the examples, create a simple perception system that:
+- Subscribes to sensor data (camera, LIDAR)
+- Performs basic object detection
+- Publishes detection results
+- Integrates with navigation system
+
+Example perception node implementation:
+```python
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+from vision_msgs.msg import Detection2DArray
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+
+
+class StudentPerceptionNode(Node):
+    def __init__(self):
+        super().__init__('student_perception_node')
+
+        # Create CV bridge
+        self.cv_bridge = CvBridge()
+
+        # Publishers and subscribers
+        self.image_sub = self.create_subscription(
+            Image, '/camera/rgb/image_raw', self.image_callback, 10
+        )
+        self.detection_pub = self.create_publisher(
+            Detection2DArray, '/student_detections', 10
+        )
+
+        self.get_logger().info('Student Perception Node initialized')
+
+    def image_callback(self, msg):
+        """Process image for object detection."""
+        try:
+            # Convert ROS Image to OpenCV image
+            cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            # Perform basic processing (for demonstration)
+            # In a real implementation, you would use Isaac ROS detectnet
+            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+
+            # For this example, just return the processed image
+            # In practice, you would perform actual object detection
+
+        except Exception as e:
+            self.get_logger().error(f'Error processing image: {e}')
+```
+
+## Step 7: Self-Assessment
+
+### 7.1 Knowledge Check
+By the end of this module, you should be able to:
+
+- [ ] Explain the components of a perception pipeline
+- [ ] Set up Isaac Sim scenes for navigation testing
+- [ ] Integrate Isaac tools with ROS 2 navigation
+- [ ] Implement basic localization algorithms
+- [ ] Work with different sensor types (camera, LIDAR, IMU)
+- [ ] Implement basic navigation behaviors in simulation
+- [ ] Understand the integration between perception and navigation
+
+### 7.2 Practical Skills Check
+You should be able to:
+
+- [ ] Launch and configure Isaac Sim environments
+- [ ] Create and modify perception pipelines
+- [ ] Set up Nav2 navigation systems
+- [ ] Monitor and interpret perception data
+- [ ] Implement basic navigation behaviors
+- [ ] Use ROS 2 tools to interact with perception systems
+- [ ] Debug common perception and navigation issues
+
+## Step 8: Assessment Completion
+
+### 8.1 Take the Module Assessment
+Complete all sections of the [Perception and Navigation Assessment](./assessment.mdx):
+
+1. **Conceptual Questions**: Answer all questions about perception and navigation
+2. **Practical Implementation**: Create the required perception and navigation systems
+3. **Analysis and Debugging**: Solve the provided scenarios
+4. **Isaac Tools Integration**: Demonstrate understanding of Isaac tools
+
+### 8.2 Verify Your Solutions
+Test each of your implementations:
+```bash
+# Test your perception node
+ros2 run your_package student_perception_node
+
+# Test your navigation system
+ros2 run your_package student_navigation_node
+
+# Test your localization system
+ros2 run your_package student_localization_node
+```
+
+## Step 9: Advanced Exploration
+
+### 9.1 Isaac Sim Advanced Features
+Explore advanced features in Isaac Sim:
+- Synthetic data generation
+- Domain randomization
+- Physics simulation accuracy
+- Multi-sensor fusion scenarios
+
+### 9.2 Performance Optimization
+Experiment with:
+- Different perception algorithms
+- Navigation parameter tuning
+- Sensor fusion techniques
+- Real-time performance optimization
+
+## Troubleshooting Common Issues
+
+### Issue 1: Isaac Sim Won't Launch
+**Symptoms**: Isaac Sim fails to start or crashes immediately
+**Solutions**:
+1. Verify NVIDIA GPU drivers are properly installed
+2. Check that Isaac Sim requirements are met
+3. Ensure sufficient system resources are available
+
+### Issue 2: Perception Data Not Processing
+**Symptoms**: No detections or poor detection quality
+**Solutions**:
+1. Verify sensor data is being published
+2. Check that Isaac ROS packages are properly installed
+3. Ensure proper topic connections between nodes
+
+### Issue 3: Navigation Failures
+**Symptoms**: Robot unable to navigate to goals
+**Solutions**:
+1. Verify map quality and localization
+2. Check navigation parameters
+3. Ensure proper sensor data for obstacle avoidance
+
+## Next Steps
+
+After successfully completing this module, students should be ready to proceed to:
+
+1. **Module 4: Vision-Language-Action** - Developing LLM-driven robot behavior
+2. **Capstone Project** - Integrating all learned concepts
+3. **Advanced AI Integration** - Working with LLMs and cognitive robotics
+
+## Completion Verification
+
+To verify successful completion of this module, ensure you can:
+
+1. ✅ Launch Isaac Sim with navigation scenes
+2. ✅ Run perception pipelines with sensor data
+3. ✅ Configure and run Nav2 navigation
+4. ✅ Implement basic localization systems
+5. ✅ Integrate Isaac tools with ROS 2 systems
+6. ✅ Complete the assessment with working code examples
+7. ✅ Explain key perception and navigation concepts to another person
+
+## Additional Resources
+
+- [Isaac Sim Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html)
+- [Isaac ROS Documentation](https://nvidia-isaac-ros.github.io/repositories_and_packages.html)
+- [ROS 2 Navigation Documentation](https://navigation.ros.org/)
+- Course discussion forum for questions
+- Isaac tools tutorials and examples

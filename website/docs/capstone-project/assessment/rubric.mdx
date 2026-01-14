@@ -1,0 +1,342 @@
+---
+sidebar_position: 3
+title: "Capstone Project Assessment Rubric"
+---
+
+# Capstone Project Assessment Rubric
+
+## Overview
+
+This rubric provides the evaluation criteria for the Physical AI & Humanoid Robotics Capstone Project. The assessment measures students' ability to integrate all course concepts into a comprehensive autonomous humanoid robotics system.
+
+## Scoring Structure
+
+The capstone project is evaluated using a comprehensive rubric across multiple dimensions:
+
+- **Technical Implementation (40%)**: Quality and correctness of the technical solution
+- **System Integration (25%)**: How well different components work together
+- **Functionality (20%)**: The system's ability to perform required tasks
+- **Innovation and Creativity (10%)**: Creative solutions and novel approaches
+- **Documentation and Presentation (5%)**: Code quality and presentation
+
+## Detailed Assessment Criteria
+
+### 1. Technical Implementation (40%)
+
+#### 1.1 Architecture and Design (15%)
+- **Excellent (A)**: Well-designed, modular architecture with clear separation of concerns
+- **Proficient (B)**: Good architecture with appropriate modularity
+- **Developing (C)**: Adequate architecture with some design issues
+- **Beginning (D)**: Poor architecture with significant structural problems
+
+**Specific Criteria:**
+- Proper use of ROS 2 concepts (nodes, topics, services, actions)
+- Appropriate use of Isaac Sim and Isaac ROS tools
+- Clean separation of perception, language understanding, and action components
+- Proper error handling and resource management
+- Efficient use of computational resources
+
+#### 1.2 Code Quality (15%)
+- **Excellent (A)**: Clean, well-documented, efficient, and follows best practices
+- **Proficient (B)**: Good code quality with minor issues
+- **Developing (C)**: Adequate code with some quality concerns
+- **Beginning (D)**: Poor code quality with significant issues
+
+**Specific Criteria:**
+- Clear variable names and function organization
+- Proper commenting and documentation
+- Follows Python/ROS 2 style guidelines
+- Efficient algorithms and data structures
+- Proper error handling and logging
+
+#### 1.3 Technical Correctness (10%)
+- **Excellent (A)**: All technical requirements met with no errors
+- **Proficient (B)**: Most requirements met with minor errors
+- **Developing (C)**: Core requirements met with some technical issues
+- **Beginning (D)**: Significant technical issues preventing proper function
+
+**Specific Criteria:**
+- Correct implementation of perception pipeline
+- Proper integration of language understanding
+- Accurate action execution
+- Compliance with ROS 2 and Isaac Sim standards
+- Proper use of message types and interfaces
+
+### 2. System Integration (25%)
+
+#### 2.1 Component Integration (15%)
+- **Excellent (A)**: Seamless integration with all components working harmoniously
+- **Proficient (B)**: Good integration with minor interface issues
+- **Developing (C)**: Basic integration with some communication problems
+- **Beginning (D)**: Poor integration with significant component conflicts
+
+**Specific Criteria:**
+- Proper communication between perception and action components
+- Effective language-to-action mapping
+- Smooth data flow between modules
+- Appropriate use of ROS 2 messaging patterns
+- Proper handling of asynchronous operations
+
+#### 2.2 Isaac Tools Integration (10%)
+- **Excellent (A)**: Sophisticated use of Isaac tools with advanced features
+- **Proficient (B)**: Good use of Isaac tools with appropriate features
+- **Developing (C)**: Basic use of Isaac tools with some limitations
+- **Beginning (D)**: Minimal or incorrect use of Isaac tools
+
+**Specific Criteria:**
+- Proper use of Isaac Sim for testing and development
+- Effective integration with Isaac ROS perception packages
+- Appropriate use of synthetic data generation
+- Correct simulation-to-reality transfer implementation
+- Proper use of Isaac tools for acceleration
+
+### 3. Functionality (20%)
+
+#### 3.1 Task Completion (10%)
+- **Excellent (A)**: All required tasks completed with advanced capabilities
+- **Proficient (B)**: All required tasks completed successfully
+- **Developing (C)**: Most tasks completed with some limitations
+- **Beginning (D)**: Few tasks completed or significant functionality missing
+
+**Specific Criteria:**
+- Successful execution of navigation tasks
+- Proper handling of manipulation tasks
+- Effective response to voice commands
+- Accurate perception and understanding of environment
+- Reliable system operation
+
+#### 3.2 Robustness and Reliability (10%)
+- **Excellent (A)**: Highly robust with graceful error handling
+- **Proficient (B)**: Good robustness with adequate error handling
+- **Developing (C)**: Basic robustness with some error handling
+- **Beginning (D)**: Poor robustness with frequent failures
+
+**Specific Criteria:**
+- Proper handling of sensor failures
+- Recovery from navigation errors
+- Robust command interpretation
+- Graceful degradation when components fail
+- Consistent performance under various conditions
+
+### 4. Innovation and Creativity (10%)
+
+#### 4.1 Creative Solutions (5%)
+- **Excellent (A)**: Novel and innovative approaches to challenges
+- **Proficient (B)**: Creative solutions to specific problems
+- **Developing (C)**: Some creative thinking evident
+- **Beginning (D)**: Standard approaches with little innovation
+
+**Specific Criteria:**
+- Novel approaches to integration challenges
+- Creative use of available tools and frameworks
+- Innovative solutions to perception or navigation problems
+- Original ideas for improving system performance
+- Unique approaches to handling complex scenarios
+
+#### 4.2 Advanced Features (5%)
+- **Excellent (A)**: Multiple advanced features implemented beyond requirements
+- **Proficient (B)**: Some advanced features implemented
+- **Developing (C)**: Basic features only
+- **Beginning (D)**: Missing required basic features
+
+**Specific Criteria:**
+- Advanced perception capabilities
+- Sophisticated language understanding
+- Complex multi-step task execution
+- Learning or adaptation capabilities
+- Advanced safety features
+
+### 5. Documentation and Presentation (5%)
+
+#### 5.1 Code Documentation (2%)
+- **Excellent (A)**: Comprehensive, clear, and helpful documentation
+- **Proficient (B)**: Good documentation with minor gaps
+- **Developing (C)**: Basic documentation with some clarity issues
+- **Beginning (D)**: Poor or missing documentation
+
+#### 5.2 Project Presentation (3%)
+- **Excellent (A)**: Clear, comprehensive, and compelling presentation
+- **Proficient (B)**: Good presentation with appropriate detail
+- **Developing (C)**: Basic presentation with some clarity issues
+- **Beginning (D)**: Poor presentation with missing critical information
+
+## Assessment Tasks
+
+### Task 1: System Architecture Review
+Students must submit:
+- System architecture diagram
+- Component interaction documentation
+- Design rationale document
+- ROS 2 node graph
+
+**Evaluation**:
+- 20 points for complete architecture with clear diagrams
+- 15 points for good architecture with minor omissions
+- 10 points for basic architecture with issues
+- 5 points for incomplete or unclear architecture
+
+### Task 2: Implementation Demonstration
+Students must demonstrate:
+- Voice command processing
+- Navigation to specified locations
+- Object perception and interaction
+- Error handling and recovery
+
+**Evaluation**:
+- 25 points for flawless demonstration of all capabilities
+- 20 points for successful demonstration with minor issues
+- 15 points for mostly successful demonstration
+- 10 points for partial demonstration with major issues
+
+### Task 3: Performance Analysis
+Students must provide:
+- Performance benchmarks
+- Resource usage analysis
+- Comparison with baseline implementations
+- Optimization strategies used
+
+**Evaluation**:
+- 15 points for comprehensive performance analysis
+- 12 points for good analysis with some gaps
+- 8 points for basic analysis
+- 5 points for minimal or incomplete analysis
+
+### Task 4: Innovation Showcase
+Students must present:
+- Novel features or capabilities
+- Creative solutions to challenges
+- Performance improvements over baseline
+- Future enhancement proposals
+
+**Evaluation**:
+- 10 points for exceptional innovation
+- 8 points for good innovation
+- 5 points for basic innovation
+- 3 points for minimal innovation
+
+### Task 5: Documentation Package
+Students must submit:
+- Complete code documentation
+- User manual
+- Implementation guide
+- Troubleshooting guide
+
+**Evaluation**:
+- 10 points for comprehensive documentation package
+- 8 points for good documentation with minor gaps
+- 5 points for basic documentation
+- 3 points for incomplete documentation
+
+## Grading Scale
+
+### Overall Score Calculation
+- Technical Implementation: 40% × 100 = 40 points
+- System Integration: 25% × 100 = 25 points
+- Functionality: 20% × 100 = 20 points
+- Innovation: 10% × 100 = 10 points
+- Documentation: 5% × 100 = 5 points
+- **Total: 100 points**
+
+### Grade Boundaries
+- A (90-100): Exceptional work demonstrating mastery
+- B (80-89): Very good work with minor issues
+- C (70-79): Satisfactory work meeting requirements
+- D (60-69): Below expectations with significant issues
+- F (&lt;60): Unsatisfactory work not meeting requirements
+
+## Evaluation Process
+
+### Self-Assessment
+Students should complete a self-assessment before submission:
+1. Verify all functional requirements are met
+2. Test system in various scenarios
+3. Document performance characteristics
+4. Identify areas for improvement
+
+### Peer Review
+Students participate in peer review:
+1. Evaluate another team's system
+2. Provide constructive feedback
+3. Identify strengths and weaknesses
+4. Suggest improvements
+
+### Instructor Evaluation
+Instructors conduct comprehensive evaluation:
+1. Technical implementation review
+2. System demonstration observation
+3. Performance analysis verification
+4. Documentation assessment
+
+### Final Review
+1. Compile all evaluation components
+2. Apply rubric consistently
+3. Provide detailed feedback
+4. Determine final grade
+
+## Submission Requirements
+
+### Required Deliverables
+1. **Source Code**: Complete, documented implementation
+2. **Documentation**: Architecture, user guide, technical details
+3. **Demonstration Video**: Showing key capabilities
+4. **Performance Report**: Benchmarks and analysis
+5. **Reflection Paper**: Lessons learned and future work
+
+### Submission Format
+- GitHub repository with all code and documentation
+- ZIP archive of complete project
+- Demonstration video (10 minutes max)
+- Written reports in PDF format
+- Performance benchmark data
+
+## Quality Assurance Checklist
+
+Before submission, verify:
+
+### System Requirements
+- [ ] All ROS 2 nodes start without errors
+- [ ] Proper communication between components
+- [ ] Isaac Sim integration works correctly
+- [ ] Voice command processing functions
+- [ ] Navigation system operates correctly
+- [ ] Safety mechanisms are in place
+
+### Performance Requirements
+- [ ] System responds to commands within 5 seconds
+- [ ] Navigation executes reliably
+- [ ] Perception system functions in real-time
+- [ ] Resource usage is reasonable
+- [ ] Error handling is robust
+
+### Documentation Requirements
+- [ ] Code is properly commented
+- [ ] Architecture is clearly explained
+- [ ] User manual is comprehensive
+- [ ] Implementation guide is accurate
+- [ ] Troubleshooting guide is helpful
+
+## Appeals Process
+
+If students disagree with their evaluation:
+1. Review feedback carefully
+2. Submit written appeal with specific concerns
+3. Provide evidence supporting their position
+4. Participate in appeals discussion if requested
+
+## Resources
+- [ROS 2 Style Guide](https://docs.ros.org/en/humble/The-ROS2-Project-Style-Guide.html)
+- [Isaac Sim Best Practices](https://docs.omniverse.nvidia.com/isaacsim/latest/tutorial_best_practices.html)
+- [Software Engineering Principles](https://swe-book.com/)
+- Course discussion forum for questions
+
+## Evaluation Rubric Summary Table
+
+| Category | Weight | Points | Excellent (A) | Proficient (B) | Developing (C) | Beginning (D) |
+|----------|--------|--------|---------------|----------------|----------------|---------------|
+| Technical Implementation | 40% | 40 | Well-designed, modular | Good architecture | Adequate architecture | Poor architecture |
+| System Integration | 25% | 25 | Seamless integration | Good integration | Basic integration | Poor integration |
+| Functionality | 20% | 20 | All tasks completed | All tasks completed | Most tasks completed | Few tasks completed |
+| Innovation & Creativity | 10% | 10 | Novel approaches | Creative solutions | Some creativity | Standard approaches |
+| Documentation & Presentation | 5% | 5 | Comprehensive docs | Good documentation | Basic documentation | Poor documentation |
+
+This evaluation framework ensures that students develop comprehensive skills in physical AI and humanoid robotics, preparing them for advanced work in the field.

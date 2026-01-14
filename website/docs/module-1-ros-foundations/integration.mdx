@@ -1,0 +1,247 @@
+---
+sidebar_position: 6
+title: "ROS 2 Examples Integration"
+---
+
+# ROS 2 Examples Integration
+
+## Overview
+
+This page demonstrates how to integrate and use the ROS 2 examples provided in the Physical AI & Humanoid Robotics Course. These examples illustrate practical implementations of ROS 2 concepts.
+
+## Running the Examples
+
+### Prerequisites
+
+Before running the examples, make sure you have:
+
+1. ROS 2 Humble Hawksbill installed
+2. Source the ROS 2 environment:
+   ```bash
+   source /opt/ros/humble/setup.bash
+   ```
+
+### Hello World Example
+
+The hello world example demonstrates basic publisher/subscriber communication.
+
+#### Running the Publisher
+
+```bash
+cd simulation-examples/python-scripts/ros2_examples
+python3 hello_world.py
+```
+
+#### Running the Subscriber
+
+In a separate terminal:
+
+```bash
+cd simulation-examples/python-scripts/ros2_examples
+python3 hello_world_subscriber.py  # You'll need to create this
+```
+
+### Joint Control Example
+
+The joint control example demonstrates how to control robot joints using ROS 2.
+
+#### Running the Joint Controller
+
+```bash
+cd simulation-examples/ros2-workspaces
+python3 basic_nodes/joint_control_example.py
+```
+
+This example will demonstrate various motion patterns:
+- Home position
+- Test positions
+- Sine wave motion
+- Circular motion
+
+## Interactive Code Blocks
+
+Below are some interactive code examples that you can run to experiment with ROS 2 concepts:
+
+<CodeBlock title="simple_publisher.py" language="python">
+```python
+#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class SimplePublisher(Node):
+
+    def __init__(self):
+        super().__init__('simple_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Hello World: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+        self.i += 1
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    simple_publisher = SimplePublisher()
+
+    rclpy.spin(simple_publisher)
+
+    # Destroy the node explicitly
+    simple_publisher.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+<ROS2NodeComponent
+  nodeName="simple_publisher"
+  description="A basic ROS 2 publisher node that publishes messages to a topic."
+  nodeCode={`#!/usr/bin/env python3
+
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class SimplePublisher(Node):
+
+    def __init__(self):
+        super().__init__('simple_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Hello World: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+        self.i += 1
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    simple_publisher = SimplePublisher()
+
+    rclpy.spin(simple_publisher)
+
+    # Destroy the node explicitly
+    simple_publisher.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()`}
+/>
+
+## URDF Model Examples
+
+The course includes several URDF models that demonstrate robot modeling concepts:
+
+<URDFModelComponent
+  modelName="simple_humanoid"
+  description="A simple humanoid robot model with basic joints and links."
+  urdfCode={`<?xml version="1.0"?>
+<!-- Simple Humanoid Robot Model for the Physical AI & Humanoid Robotics Course -->
+<robot name="simple_humanoid">
+  <!-- Base Link -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.3 0.2 0.1"/>
+      </geometry>
+      <material name="blue">
+        <color rgba="0 0 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.3 0.2 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.1" ixy="0.0" ixz="0.0" iyy="0.1" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+  <!-- Additional links and joints... -->
+</robot>`}
+/>
+
+## Simulation Integration
+
+The examples are designed to work with Gazebo simulation. You can load the models in Gazebo:
+
+```bash
+# Launch Gazebo with the simple humanoid world
+ign gazebo simulation-examples/gazebo_worlds/simple_humanoid.world
+```
+
+## Testing Your Setup
+
+To verify that your ROS 2 setup is working correctly:
+
+1. Run the hello world publisher:
+   ```bash
+   python3 simulation-examples/python-scripts/ros2_examples/hello_world.py
+   ```
+
+2. In another terminal, check available topics:
+   ```bash
+   ros2 topic list
+   ```
+
+3. Echo the hello world topic:
+   ```bash
+   ros2 topic echo /hello_world std_msgs/msg/String
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **ModuleNotFoundError: No module named 'rclpy'**
+   - Make sure ROS 2 is installed and sourced
+   - Check that you're using the correct Python environment
+
+2. **Node not connecting to ROS 2 master**
+   - Verify that ROS 2 environment is sourced in each terminal
+   - Check that ROS_DOMAIN_ID is consistent across terminals
+
+3. **Permission errors**
+   - Make sure the Python files are executable
+   - Check file permissions if running in a container
+
+## Best Practices
+
+1. **Always source the ROS 2 environment** before running nodes
+2. **Use descriptive node and topic names** for easier debugging
+3. **Implement proper error handling** in your nodes
+4. **Clean up resources** properly when nodes are destroyed
+5. **Use appropriate QoS settings** for your application requirements
+
+## Next Steps
+
+After experimenting with these examples, try:
+
+1. Creating your own custom messages
+2. Implementing services in addition to topics
+3. Using parameters to configure node behavior
+4. Creating launch files to run multiple nodes together
+5. Integrating with simulation environments
+
+The examples provided form the foundation for more complex robotic applications that you'll build throughout the course.

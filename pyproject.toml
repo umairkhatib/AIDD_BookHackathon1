@@ -1,0 +1,38 @@
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = [
+    "simulation-examples",
+    "tests"
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+    "simulation-examples/test_simulation.py"
+]
+python_classes = ["Test*"]
+python_functions = ["test_*", "test_"]
+
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-v"
+]
+
+[tool.coverage.run]
+source = ["simulation-examples"]
+omit = [
+    "*/venv/*",
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:"
+]

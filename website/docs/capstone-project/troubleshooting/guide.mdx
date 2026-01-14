@@ -1,0 +1,483 @@
+---
+sidebar_position: 4
+title: "Capstone Project Troubleshooting Guide"
+---
+
+# Capstone Project Troubleshooting Guide
+
+## Overview
+
+This guide provides solutions to common issues encountered during the capstone project implementation. It covers problems related to ROS 2 integration, Isaac Sim, perception systems, navigation, and language understanding components.
+
+## Common Issues and Solutions
+
+### 1. ROS 2 Communication Issues
+
+#### Issue: Nodes cannot communicate with each other
+**Symptoms:**
+- Topics not showing up in `ros2 topic list`
+- Messages not being received by subscribers
+- Nodes unable to establish connections
+
+**Solutions:**
+1. Verify that all nodes are on the same ROS domain:
+   ```bash
+   echo $ROS_DOMAIN_ID
+   export ROS_DOMAIN_ID=0  # Set to the same domain ID for all nodes
+   ```
+
+2. Check that the ROS 2 daemon is running:
+   ```bash
+   ros2 daemon status
+   ros2 daemon start  # Start if not running
+   ```
+
+3. Verify topic names match between publishers and subscribers:
+   ```bash
+   ros2 topic list
+   ros2 topic info /capstone/voice_commands
+   ```
+
+4. Check for typos in topic/service names in your code
+
+#### Issue: High latency in message transmission
+**Symptoms:**
+- Delayed responses to commands
+- Slow perception updates
+- Poor real-time performance
+
+**Solutions:**
+1. Reduce queue sizes for time-sensitive topics:
+   ```python
+   # In publisher creation
+   self.publisher = self.create_publisher(String, '/fast_topic', 1)  # Small queue
+   ```
+
+2. Use QoS profiles for reliable communication:
+   ```python
+   from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
+
+   qos_profile = QoSProfile(
+       depth=10,
+       reliability=ReliabilityPolicy.RELIABLE,
+       durability=DurabilityPolicy.VOLATILE
+   )
+   ```
+
+3. Check system resources and optimize node processing time
+
+### 2. Isaac Sim Integration Issues
+
+#### Issue: Isaac Sim not connecting with ROS 2 nodes
+**Symptoms:**
+- No sensor data from Isaac Sim
+- Robot commands not affecting simulation
+- Isaac ROS bridges not working
+
+**Solutions:**
+1. Verify Isaac Sim is launched with ROS bridge enabled:
+   ```bash
+   # Launch Isaac Sim with ROS bridge
+   ./isaac-sim/python.sh -c "from omni.isaac.kit import SimulationApp; sim_app = SimulationApp(); sim_app.close()"
+   ```
+
+2. Check that Isaac ROS extensions are enabled:
+   - Open Isaac Sim
+   - Go to Window → Extensions
+   - Enable Isaac ROS Bridge extensions
+
+3. Verify Isaac ROS packages are installed:
+   ```bash
+   # Check installed Isaac ROS packages
+   apt list --installed | grep isaac-ros
+   ```
+
+4. Check for correct frame IDs and coordinate transforms
+
+#### Issue: Sensor data not publishing correctly
+**Symptoms:**
+- Empty or invalid sensor messages
+- Incorrect data types
+- Frame ID mismatches
+
+**Solutions:**
+1. Verify sensor configuration in USD stage:
+   ```python
+   # Check sensor properties
+   sensor = omni.isaac.sensor.SimCamera(...)
+   sensor.add_modifications_to_stage()
+   ```
+
+2. Verify message types match between Isaac Sim and ROS 2:
+   ```bash
+   # Check message type
+   ros2 topic info /camera/rgb/image_raw
+   ros2 interface show sensor_msgs/msg/Image
+   ```
+
+3. Check coordinate frame transformations:
+   ```python
+   # Use TF2 for frame transformations
+   import tf2_ros
+   tf_buffer = tf2_ros.Buffer()
+   tf_listener = tf2_ros.TransformListener(tf_buffer, self)
+   ```
+
+### 3. Perception System Issues
+
+#### Issue: Object detection not working
+**Symptoms:**
+- No object detections being published
+- Low detection accuracy
+- High processing time
+
+**Solutions:**
+1. Verify Isaac ROS detection nodes are running:
+   ```bash
+   ros2 run isaac_ros_detectnet isaac_ros_detectnet
+   ```
+
+2. Check that input topics match output topics:
+   ```bash
+   # Verify camera topic
+   ros2 topic echo /camera/rgb/image_raw
+   ros2 topic echo /detectnet/detections
+   ```
+
+3. Verify model files are accessible:
+   ```bash
+   # Check model file permissions and existence
+   ls -la /workspace/models/detectnet/model.plan
+   ```
+
+4. Adjust confidence thresholds:
+   ```python
+   # In detectnet configuration
+   detection_confidence_threshold = 0.5  # Adjust as needed
+   ```
+
+#### Issue: LIDAR data processing problems
+**Symptoms:**
+- Empty LIDAR scans
+- Invalid range values
+- Incorrect frame rates
+
+**Solutions:**
+1. Check LIDAR sensor configuration in Isaac Sim:
+   ```python
+   # Verify LIDAR parameters
+   lidar = RotatingLidarSensor(
+       prim_path="/World/Lidar",
+       translation=np.array([0.2, 0, 0.2]),
+       name="Lidar",
+       fov=360,
+       horizontal_resolution=1,
+       vertical_resolution=16,
+       range=10,
+       rotation_frequency=20,
+       points_per_second=50000
+   )
+   ```
+
+2. Verify LIDAR topic format:
+   ```bash
+   ros2 topic info /scan
+   ros2 interface show sensor_msgs/msg/LaserScan
+   ```
+
+3. Check for inf/nan values in LIDAR data:
+   ```python
+   def lidar_callback(self, msg):
+       # Filter out invalid ranges
+       filtered_ranges = [r for r in msg.ranges if 0 < r < float('inf')]
+   ```
+
+### 4. Navigation System Issues
+
+#### Issue: Navigation goals not being reached
+**Symptoms:**
+- Robot stops before reaching goal
+- Path planning fails
+- Local planner gets stuck
+
+**Solutions:**
+1. Check Nav2 configuration files:
+   ```yaml
+   # In nav2_params.yaml
+   bt_navigator:
+     ros__parameters:
+       global_frame: map
+       robot_base_frame: base_link
+       transform_tolerance: 0.1
+   ```
+
+2. Verify costmap parameters:
+   ```yaml
+   # In costmap_common_params.yaml
+   obstacle_range: 3.0
+   raytrace_range: 3.5
+   inflation_radius: 0.55
+   ```
+
+3. Check that transforms are available:
+   ```bash
+   ros2 run tf2_tools view_frames
+   ros2 run tf2_ros tf2_echo map base_link
+   ```
+
+#### Issue: Local costmap not updating
+**Symptoms:**
+- Robot doesn't avoid dynamic obstacles
+- Costmap shows static environment only
+- Obstacles not appearing in costmap
+
+**Solutions:**
+1. Verify sensor topics are connected to costmap:
+   ```yaml
+   local_costmap:
+     ros__parameters:
+       local_costmap:
+         laser_scan_sensor: {sensor_plugin: "nav2_costmap_2d::LaserScanSensor"}
+         topic: /scan
+         marking: true
+         clearing: true
+   ```
+
+2. Check sensor mounting position and orientation:
+   ```bash
+   # Verify sensor is properly positioned
+   ros2 run tf2_ros tf2_echo base_link laser_frame
+   ```
+
+### 5. Language Understanding Issues
+
+#### Issue: Whisper model not loading
+**Symptoms:**
+- Error loading Whisper model
+- High memory usage
+- Long processing times
+
+**Solutions:**
+1. Check available system memory:
+   ```bash
+   free -h
+   # Whisper models can use 2-6GB of RAM depending on size
+   ```
+
+2. Install Whisper with proper dependencies:
+   ```bash
+   pip3 install openai-whisper
+   # Or for GPU acceleration
+   pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   pip3 install openai-whisper
+   ```
+
+3. Use smaller model for limited resources:
+   ```python
+   # Use 'tiny' or 'base' model instead of 'large'
+   self.whisper_model = whisper.load_model("base")
+   ```
+
+#### Issue: LLM integration problems
+**Symptoms:**
+- API errors when calling LLM
+- Rate limiting issues
+- Authentication failures
+
+**Solutions:**
+1. Verify API key is set:
+   ```bash
+   export OPENAI_API_KEY="your-api-key-here"
+   echo $OPENAI_API_KEY
+   ```
+
+2. Implement rate limiting:
+   ```python
+   import time
+   import openai
+
+   # Add delays between API calls
+   time.sleep(1)  # Wait 1 second between calls
+   ```
+
+3. Add error handling for API failures:
+   ```python
+   try:
+       response = openai.ChatCompletion.create(
+           model="gpt-3.5-turbo",
+           messages=messages,
+           timeout=30
+       )
+   except openai.error.RateLimitError:
+       self.get_logger().warn("Rate limit exceeded, retrying...")
+       time.sleep(60)  # Wait before retry
+   except Exception as e:
+       self.get_logger().error(f"LLM API error: {e}")
+   ```
+
+### 6. Performance Issues
+
+#### Issue: High CPU/GPU usage
+**Symptoms:**
+- System slowdown
+- Overheating
+- Poor real-time performance
+
+**Solutions:**
+1. Profile your nodes to find bottlenecks:
+   ```bash
+   # Use ROS 2 tools for profiling
+   ros2 run plotjuggler plotjuggler
+   ros2 run ros2topic echo /capstone/performance_metrics
+   ```
+
+2. Optimize processing frequency:
+   ```python
+   # Reduce processing frequency for non-critical tasks
+   self.timer = self.create_timer(0.5, self.low_priority_callback)  # 2 Hz
+   self.timer = self.create_timer(0.033, self.high_priority_callback)  # 30 Hz
+   ```
+
+3. Use multithreading for heavy computations:
+   ```python
+   import threading
+   from concurrent.futures import ThreadPoolExecutor
+
+   executor = ThreadPoolExecutor(max_workers=2)
+   future = executor.submit(heavy_computation_function, args)
+   ```
+
+#### Issue: Memory leaks
+**Symptoms:**
+- Gradually increasing memory usage
+- System becoming unresponsive
+- Nodes crashing after extended runtime
+
+**Solutions:**
+1. Implement proper cleanup in node destruction:
+   ```python
+   def destroy_node(self):
+       # Clean up resources
+       if hasattr(self, 'whisper_model'):
+           del self.whisper_model
+       if hasattr(self, 'executor'):
+           self.executor.shutdown(wait=True)
+       return super().destroy_node()
+   ```
+
+2. Monitor memory usage:
+   ```python
+   import psutil
+
+   def check_memory_usage(self):
+       process = psutil.Process()
+       memory_mb = process.memory_info().rss / 1024 / 1024
+       if memory_mb > 1000:  # 1GB threshold
+           self.get_logger().warn(f"High memory usage: {memory_mb:.2f} MB")
+   ```
+
+### 7. Safety and Emergency Issues
+
+#### Issue: Safety system triggering unexpectedly
+**Symptoms:**
+- Frequent emergency stops
+- Robot not responding to commands
+- Safety level showing as danger
+
+**Solutions:**
+1. Check safety thresholds:
+   ```python
+   # Adjust safety parameters
+   self.safe_distance = 0.8  # Increase from 0.5 if too sensitive
+   self.cmd_timeout = 10.0   # Increase from 5.0 if network is slow
+   ```
+
+2. Verify sensor calibration:
+   ```python
+   # Check that sensors are properly calibrated
+   def verify_sensor_calibration(self):
+       # Ensure LIDAR readings are accurate
+       pass
+   ```
+
+3. Check for false obstacle detections:
+   ```python
+   def filter_false_obstacles(self, ranges):
+       # Filter out false positives
+       filtered = [r for r in ranges if r > self.min_valid_range]
+       return filtered
+   ```
+
+## Debugging Strategies
+
+### 1. Systematic Debugging Approach
+1. **Reproduce the issue**: Document exact steps to reproduce
+2. **Isolate the component**: Test individual components separately
+3. **Check logs**: Examine ROS 2 logs and system messages
+4. **Verify configuration**: Double-check all configuration files
+5. **Test with minimal setup**: Simplify system to isolate issue
+
+### 2. Logging Best Practices
+```python
+# Use appropriate log levels
+self.get_logger().debug("Detailed debugging info")
+self.get_logger().info("Normal operational info")
+self.get_logger().warn("Potential issues")
+self.get_logger().error("Errors occurred")
+self.get_logger().fatal("Critical errors")
+```
+
+### 3. Monitoring Tools
+```bash
+# Monitor system resources
+htop
+iotop
+
+# Monitor ROS 2 topics
+ros2 topic hz /capstone/status
+ros2 topic bw /camera/rgb/image_raw
+
+# Monitor nodes
+ros2 run rqt_graph rqt_graph
+```
+
+## Preventive Measures
+
+### 1. Code Reviews
+- Regular code reviews to catch issues early
+- Peer programming for complex components
+- Static analysis tools
+
+### 2. Testing Strategy
+- Unit tests for individual components
+- Integration tests for subsystems
+- System tests for full functionality
+
+### 3. Documentation
+- Keep documentation updated
+- Document configuration changes
+- Maintain troubleshooting notes
+
+## Getting Help
+
+### When to Seek Help
+- Issues persist after attempting troubleshooting steps
+- Error messages are unclear or cryptic
+- Integration problems between different modules
+- Performance issues that affect system stability
+
+### Resources for Help
+- Course discussion forums
+- ROS 2 documentation and community
+- Isaac Sim documentation and support
+- Stack Overflow with appropriate tags
+
+### Information to Provide When Seeking Help
+1. **Exact error messages** (copy and paste when possible)
+2. **Steps to reproduce** the issue
+3. **Expected vs. actual behavior**
+4. **System configuration** (OS, ROS version, hardware)
+5. **Relevant code snippets** or configuration files
+6. **What troubleshooting steps** you've already tried
+
+This troubleshooting guide should help resolve most common issues encountered during the capstone project implementation. Remember to approach problems systematically and document your solutions for future reference.

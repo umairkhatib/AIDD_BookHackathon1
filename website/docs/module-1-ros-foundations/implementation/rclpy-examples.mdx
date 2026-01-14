@@ -1,0 +1,374 @@
+---
+sidebar_position: 1
+title: "rclpy Implementation Examples"
+---
+
+# rclpy Implementation Examples
+
+## Introduction
+
+In this section, we'll explore practical implementation examples using rclpy, the Python client library for ROS 2. These examples will help you understand how to implement ROS 2 concepts in practice.
+
+## Publisher Example
+
+Let's start with a simple publisher example that demonstrates the basic structure of a ROS 2 publisher node:
+
+import { CodeBlock } from '@site/src/components/CodeBlock';
+
+<CodeBlock title="publisher_example.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Simple publisher example for ROS 2
+"""
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class MinimalPublisher(Node):
+
+    def __init__(self):
+        super().__init__('minimal_publisher')
+        self.publisher_ = self.create_publisher(String, 'topic', 10)
+        timer_period = 0.5  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = 'Hello World: %d' % self.i
+        self.publisher_.publish(msg)
+        self.get_logger().info('Publishing: "%s"' % msg.data)
+        self.i += 1
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_publisher = MinimalPublisher()
+
+    rclpy.spin(minimal_publisher)
+
+    # Destroy the node explicitly
+    minimal_publisher.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+### Running the Publisher
+
+To run this publisher:
+
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Navigate to the workspace
+cd simulation-examples/ros2-workspaces
+
+# Run the publisher
+python3 basic_nodes/simple_publisher.py
+```
+
+## Subscriber Example
+
+Now let's look at a subscriber example that listens to messages published by the publisher:
+
+<CodeBlock title="subscriber_example.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Simple subscriber example for ROS 2
+"""
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class MinimalSubscriber(Node):
+
+    def __init__(self):
+        super().__init__('minimal_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'topic',
+            self.listener_callback,
+            10)
+        self.subscription  # prevent unused variable warning
+
+    def listener_callback(self, msg):
+        self.get_logger().info('I heard: "%s"' % msg.data)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_subscriber = MinimalSubscriber()
+
+    rclpy.spin(minimal_subscriber)
+
+    # Destroy the node explicitly
+    minimal_subscriber.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+### Running the Subscriber
+
+To run the subscriber in a separate terminal while the publisher is running:
+
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Navigate to the workspace
+cd simulation-examples/ros2-workspaces
+
+# Run the subscriber
+python3 basic_nodes/simple_subscriber.py
+```
+
+## Publisher with Parameters
+
+Here's an example of a publisher that uses parameters:
+
+<CodeBlock title="parameter_publisher.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Publisher with parameters example for ROS 2
+"""
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+
+class ParameterPublisher(Node):
+
+    def __init__(self):
+        super().__init__('parameter_publisher')
+
+        # Declare parameters with default values
+        self.declare_parameter('message', 'Hello World!')
+        self.declare_parameter('publish_rate', 1.0)
+
+        # Get parameter values
+        self.message = self.get_parameter('message').value
+        self.publish_rate = self.get_parameter('publish_rate').value
+
+        self.publisher_ = self.create_publisher(String, 'parameter_topic', 10)
+        timer_period = 1.0 / self.publish_rate  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'{self.message}: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+        self.i += 1
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    parameter_publisher = ParameterPublisher()
+
+    rclpy.spin(parameter_publisher)
+
+    # Destroy the node explicitly
+    parameter_publisher.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+### Running with Parameters
+
+You can run the parameter publisher with custom parameters:
+
+```bash
+# Run with custom parameters
+ros2 run your_package_name parameter_publisher --ros-args -p message:="Custom Message" -p publish_rate:=2.0
+```
+
+## Service Server Example
+
+Here's an example of a service server that adds two integers:
+
+<CodeBlock title="service_server.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Service server example for ROS 2
+"""
+import rclpy
+from rclpy.node import Node
+from example_interfaces.srv import AddTwoInts
+
+
+class MinimalService(Node):
+
+    def __init__(self):
+        super().__init__('minimal_service')
+        self.srv = self.create_service(AddTwoInts, 'add_two_ints', self.add_two_ints_callback)
+
+    def add_two_ints_callback(self, request, response):
+        response.sum = request.a + request.b
+        self.get_logger().info(f'Incoming request\na: {request.a} b: {request.b}')
+        self.get_logger().info(f'Sending back response: [{response.sum}]')
+        return response
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_service = MinimalService()
+
+    rclpy.spin(minimal_service)
+
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Service Client Example
+
+And here's a client that calls the service:
+
+<CodeBlock title="service_client.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Service client example for ROS 2
+"""
+import sys
+import rclpy
+from rclpy.node import Node
+from example_interfaces.srv import AddTwoInts
+
+
+class MinimalClient(Node):
+
+    def __init__(self):
+        super().__init__('minimal_client')
+        self.cli = self.create_client(AddTwoInts, 'add_two_ints')
+        while not self.cli.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('Service not available, waiting again...')
+        self.req = AddTwoInts.Request()
+
+    def send_request(self, a, b):
+        self.req.a = a
+        self.req.b = b
+        future = self.cli.call_async(self.req)
+        rclpy.spin_until_future_complete(self, future)
+        return future.result()
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    minimal_client = MinimalClient()
+    response = minimal_client.send_request(int(sys.argv[1]), int(sys.argv[2]))
+    minimal_client.get_logger().info(
+        f'Result of add_two_ints: {response.sum}')
+
+    minimal_client.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Timer-based Publisher
+
+Here's a more advanced example using timers for precise control:
+
+<CodeBlock title="timer_publisher.py" language="python">
+```python
+#!/usr/bin/env python3
+
+"""
+Timer-based publisher example for ROS 2
+"""
+import rclpy
+from rclpy.node import Node
+from rclpy.timer import Timer
+from std_msgs.msg import String
+
+
+class TimerPublisher(Node):
+
+    def __init__(self):
+        super().__init__('timer_publisher')
+        self.publisher_ = self.create_publisher(String, 'timer_topic', 10)
+
+        # Create a timer that calls the callback every 0.5 seconds
+        self.timer = self.create_timer(0.5, self.timer_callback)
+        self.i = 0
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Timer says: {self.i}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Published: {msg.data}')
+        self.i += 1
+
+    def destroy_node(self):
+        # Clean up the timer before destroying the node
+        self.timer.cancel()
+        super().destroy_node()
+
+
+def main(args=None):
+    rclpy.init(args=args)
+
+    timer_publisher = TimerPublisher()
+
+    try:
+        rclpy.spin(timer_publisher)
+    except KeyboardInterrupt:
+        timer_publisher.get_logger().info('Interrupted by user')
+    finally:
+        timer_publisher.destroy_node()
+        rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
+```
+</CodeBlock>
+
+## Summary
+
+These examples demonstrate the fundamental patterns for implementing ROS 2 nodes using rclpy. Key concepts covered include:
+
+- Creating publishers and subscribers
+- Working with parameters
+- Implementing services
+- Using timers for periodic tasks
+- Proper node lifecycle management
+
+Try implementing these examples yourself and experiment with different configurations to solidify your understanding of ROS 2 concepts.

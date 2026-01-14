@@ -1,0 +1,47 @@
+# ROS 2 Humble Hawksbill dependencies
+rclpy>=3.0.0
+std_msgs
+sensor_msgs
+geometry_msgs
+nav_msgs
+control_msgs
+tf2_ros
+cv_bridge
+message_filters
+launch
+launch_ros
+ros2launch
+rosbags
+
+# Scientific computing
+numpy
+scipy
+matplotlib
+pandas
+
+# Computer vision
+opencv-python
+
+# AI/ML
+torch
+torchvision
+torchaudio
+transformers
+openai-whisper
+
+# Simulation and robotics
+pybullet
+gymnasium
+stable-baselines3
+
+# Development and testing
+pytest
+pytest-cov
+black
+flake8
+mypy
+
+# Utilities
+requests
+tqdm
+pyyaml

@@ -1,0 +1,567 @@
+---
+sidebar_position: 1
+title: "Gazebo Implementation Examples"
+---
+
+# Gazebo Implementation Examples
+
+## Overview
+
+This section provides practical implementation examples for Gazebo simulation in robotics applications. These examples demonstrate how to create, configure, and interact with Gazebo environments for robotics development.
+
+## Setting Up Gazebo Environment
+
+### Basic Gazebo Launch
+
+To launch Gazebo with a basic empty world:
+
+```bash
+# Launch Gazebo with empty world
+ign gazebo -v 4
+
+# Launch with a specific world file
+ign gazebo simulation-examples/gazebo_worlds/simple_humanoid.world
+```
+
+### Environment Variables
+
+Set important Gazebo environment variables:
+
+```bash
+# Set model path to include custom models
+export GAZEBO_MODEL_PATH=${GAZEBO_MODEL_PATH}:$(pwd)/simulation-examples/gazebo_worlds
+
+# Set resource path for plugins
+export GAZEBO_RESOURCE_PATH=${GAZEBO_RESOURCE_PATH}:$(pwd)/simulation-examples/gazebo_worlds
+
+# Set plugin path
+export GAZEBO_PLUGIN_PATH=${GAZEBO_PLUGIN_PATH}:$(pwd)/simulation-examples/gazebo_worlds/build
+```
+
+## Creating Custom Worlds
+
+### World File Structure
+
+A basic Gazebo world file in SDF format:
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="my_world">
+    <!-- Include standard models -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Physics engine configuration -->
+    <physics name="1ms" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Your custom models -->
+    <include>
+      <name>my_robot</name>
+      <uri>model://my_robot_model</uri>
+      <pose>0 0 1 0 0 0</pose>
+    </include>
+
+    <!-- Custom objects -->
+    <model name="obstacle_box">
+      <pose>2 0 0.5 0 0 0</pose>
+      <link name="box_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.166667</ixx>
+            <ixy>0</ixy>
+            <ixz>0</ixz>
+            <iyy>0.166667</iyy>
+            <iyz>0</iyz>
+            <izz>0.166667</izz>
+          </inertia>
+        </inertial>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+### Creating a Maze World Example
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="maze_world">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Physics -->
+    <physics name="default" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Maze walls -->
+    <model name="wall_1">
+      <pose>0 2 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box><size>4 0.1 1</size></box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box><size>4 0.1 1</size></box>
+          </geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia><ixx>1</ixx><iyy>1</iyy><izz>1</izz></inertia>
+        </inertial>
+      </link>
+    </model>
+
+    <!-- Add more walls to form a maze -->
+    <!-- ... additional wall models ... -->
+
+    <!-- Goal marker -->
+    <model name="goal_marker">
+      <pose>3 3 0.1 0 0 0</pose>
+      <link name="marker_link">
+        <visual name="visual">
+          <geometry>
+            <cylinder><radius>0.2</radius><length>0.2</length></cylinder>
+          </geometry>
+          <material>
+            <ambient>0 1 0 1</ambient>
+            <diffuse>0 1 0 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>0.1</mass>
+          <inertia><ixx>0.01</ixx><iyy>0.01</iyy><izz>0.01</izz></inertia>
+        </inertial>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+
+## Robot Model Integration
+
+### Basic Robot Model with SDF
+
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <model name="simple_robot">
+    <!-- Robot base -->
+    <link name="chassis">
+      <pose>0 0 0.1 0 0 0</pose>
+      <collision name="collision">
+        <geometry>
+          <box><size>0.5 0.3 0.2</size></box>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <box><size>0.5 0.3 0.2</size></boxed>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+          <diffuse>0.8 0.8 0.8 1</diffuse>
+        </material>
+      </visual>
+      <inertial>
+        <mass>5.0</mass>
+        <inertia>
+          <ixx>0.1</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.2</iyy>
+          <iyz>0</iyz>
+          <izz>0.3</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <!-- Left wheel -->
+    <link name="left_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <!-- Joint connecting wheel to chassis -->
+    <joint name="left_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>left_wheel</child>
+      <pose>-0.25 0.2 0 0 1.5708 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+          <effort>100</effort>
+          <velocity>10</velocity>
+        </limit>
+      </axis>
+    </joint>
+
+    <!-- Right wheel (similar to left wheel) -->
+    <link name="right_wheel">
+      <collision name="collision">
+        <geometry>
+          <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+        </geometry>
+      </collision>
+      <visual name="visual">
+        <geometry>
+          <cylinder><radius>0.1</radius><length>0.05</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+        </material>
+      </visual>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.001</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.001</iyy>
+          <iyz>0</iyz>
+          <izz>0.002</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <joint name="right_wheel_joint" type="revolute">
+      <parent>chassis</parent>
+      <child>right_wheel</child>
+      <pose>-0.25 -0.2 0 0 1.5708 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e16</lower>
+          <upper>1e16</upper>
+          <effort>100</effort>
+          <velocity>10</velocity>
+        </limit>
+      </axis>
+    </joint>
+  </model>
+</sdf>
+```
+
+## Sensor Integration
+
+### Adding a Camera Sensor
+
+```xml
+<model name="sensor_robot">
+  <!-- ... base model ... -->
+
+  <!-- Camera sensor -->
+  <sensor name="camera" type="camera">
+    <pose>0.2 0 0.1 0 0 0</pose>
+    <camera name="head_camera">
+      <horizontal_fov>1.047</horizontal_fov>
+      <image>
+        <width>640</width>
+        <height>480</height>
+        <format>R8G8B8</format>
+      </image>
+      <clip>
+        <near>0.1</near>
+        <far>10</far>
+      </clip>
+    </camera>
+  </sensor>
+</model>
+```
+
+### Adding a LIDAR Sensor
+
+```xml
+<sensor name="lidar" type="ray">
+  <pose>0.2 0 0.2 0 0 0</pose>
+  <ray>
+    <scan>
+      <horizontal>
+        <samples>360</samples>
+        <resolution>1</resolution>
+        <min_angle>-3.14159</min_angle>
+        <max_angle>3.14159</max_angle>
+      </horizontal>
+    </scan>
+    <range>
+      <min>0.1</min>
+      <max>10</max>
+      <resolution>0.01</resolution>
+    </range>
+  </ray>
+</sensor>
+```
+
+## Gazebo Plugins
+
+### Basic ROS Control Plugin
+
+```xml
+<model name="robot_with_control">
+  <!-- ... robot model ... -->
+
+  <!-- ROS Control plugin -->
+  <plugin name="ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/my_robot</robotNamespace>
+    <robotParam>/my_robot/robot_description</robotParam>
+    <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    <legacyModeNS>true</legacyModeNS>
+  </plugin>
+</model>
+```
+
+### IMU Sensor Plugin
+
+```xml
+<sensor name="imu_sensor" type="imu">
+  <pose>0 0 0.1 0 0 0</pose>
+  <always_on>1</always_on>
+  <update_rate>100</update_rate>
+  <plugin name="imu_plugin" filename="libgazebo_ros_imu.so">
+    <robotNamespace>/my_robot</robotNamespace>
+    <topicName>imu/data</topicName>
+    <serviceName>imu/service</serviceName>
+    <gaussianNoise>0.001</gaussianNoise>
+    <updateRateHZ>100.0</updateRateHZ>
+  </plugin>
+</sensor>
+```
+
+## Python Control Scripts
+
+### Connecting to Gazebo from Python
+
+```python
+#!/usr/bin/env python3
+
+"""
+Example script to interact with Gazebo simulation
+"""
+
+import rospy
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan, Image
+from nav_msgs.msg import Odometry
+import cv2
+from cv_bridge import CvBridge
+import numpy as np
+
+
+class GazeboController:
+    def __init__(self):
+        rospy.init_node('gazebo_controller', anonymous=True)
+
+        # Publishers
+        self.cmd_vel_pub = rospy.Publisher('/robot/cmd_vel', Twist, queue_size=10)
+
+        # Subscribers
+        self.laser_sub = rospy.Subscriber('/robot/laser_scan', LaserScan, self.laser_callback)
+        self.odom_sub = rospy.Subscriber('/robot/odom', Odometry, self.odom_callback)
+        self.image_sub = rospy.Subscriber('/robot/camera/image_raw', Image, self.image_callback)
+
+        self.bridge = CvBridge()
+
+        # Robot state
+        self.laser_data = None
+        self.odom_data = None
+        self.image_data = None
+
+        rospy.loginfo("Gazebo Controller initialized")
+
+    def laser_callback(self, msg):
+        """Process laser scan data"""
+        self.laser_data = msg.ranges
+        # Example: Check for obstacles
+        if self.laser_data:
+            min_distance = min([d for d in self.laser_data if d > 0 and d < float('inf')], default=float('inf'))
+            if min_distance < 1.0:
+                rospy.loginfo(f"Obstacle detected at {min_distance:.2f}m")
+
+    def odom_callback(self, msg):
+        """Process odometry data"""
+        self.odom_data = msg.pose.pose
+        position = msg.pose.pose.position
+        orientation = msg.pose.pose.orientation
+        rospy.loginfo(f"Position: ({position.x:.2f}, {position.y:.2f})")
+
+    def image_callback(self, msg):
+        """Process camera image"""
+        try:
+            cv_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+            self.image_data = cv_image
+            # Example: Show image dimensions
+            rospy.loginfo(f"Received image: {cv_image.shape}")
+        except Exception as e:
+            rospy.logerr(f"Could not convert image: {e}")
+
+    def move_robot(self, linear_x=0.0, angular_z=0.0):
+        """Send velocity commands to robot"""
+        cmd = Twist()
+        cmd.linear.x = linear_x
+        cmd.angular.z = angular_z
+        self.cmd_vel_pub.publish(cmd)
+
+    def run(self):
+        """Main control loop"""
+        rate = rospy.Rate(10)  # 10 Hz
+
+        while not rospy.is_shutdown():
+            # Example behavior: move forward if no obstacles nearby
+            if self.laser_data:
+                min_distance = min([d for d in self.laser_data if d > 0 and d < float('inf')], default=float('inf'))
+                if min_distance > 1.0:
+                    self.move_robot(linear_x=0.5, angular_z=0.0)
+                else:
+                    self.move_robot(linear_x=0.0, angular_z=0.5)  # Turn
+            else:
+                self.move_robot(linear_x=0.0, angular_z=0.0)  # Stop if no laser data
+
+            rate.sleep()
+
+
+def main():
+    controller = GazeboController()
+
+    try:
+        controller.run()
+    except rospy.ROSInterruptException:
+        rospy.loginfo("Controller stopped")
+
+
+if __name__ == '__main__':
+    main()
+```
+
+## Launch Files for Simulation
+
+### Basic Launch File
+
+```xml
+<launch>
+  <!-- Start Gazebo -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find my_robot_pkg)/worlds/my_world.world"/>
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+  </include>
+
+  <!-- Spawn robot in Gazebo -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+        args="-file $(find my_robot_pkg)/models/robot.sdf
+              -urdf -model robot -x 0 -y 0 -z 0.1"/>
+
+  <!-- Robot state publisher -->
+  <node name="robot_state_publisher" pkg="robot_state_publisher"
+        type="robot_state_publisher" />
+
+  <!-- Joint state publisher -->
+  <node name="joint_state_publisher" pkg="joint_state_publisher"
+        type="joint_state_publisher" />
+</launch>
+```
+
+## Troubleshooting Common Issues
+
+### Gazebo Won't Start
+- Check if the physics engine is properly installed
+- Verify model paths are correctly set
+- Look for errors in the console output
+
+### Robot Not Responding to Commands
+- Check topic names match between controller and Gazebo
+- Verify ROS master is running
+- Confirm Gazebo plugins are properly loaded
+
+### Sensor Data Not Available
+- Verify sensor plugins are correctly configured
+- Check topic names and message types
+- Ensure proper permissions and network setup
+
+## Performance Optimization
+
+### Reducing Simulation Load
+- Lower physics update rate if precision allows
+- Reduce sensor update rates
+- Simplify collision geometries where possible
+- Limit the number of active models in the scene
+
+### Memory Management
+- Use efficient mesh representations
+- Implement level-of-detail for distant objects
+- Monitor and optimize plugin performance
+
+## Summary
+
+These examples demonstrate fundamental Gazebo implementation patterns for robotics simulation. From basic world creation to sensor integration and control systems, these building blocks form the foundation for more complex simulation scenarios. Understanding these concepts is essential for developing effective robotics simulation environments.

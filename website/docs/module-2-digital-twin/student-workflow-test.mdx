@@ -1,0 +1,332 @@
+---
+sidebar_position: 8
+title: "Student Workflow Test - Simulation Environment"
+---
+
+# Student Workflow Test - Simulation Environment
+
+## Overview
+
+This document outlines the complete student workflow for the Simulation Environment module (Module 2). It serves as both a testing guide to verify the module works as intended and a student tutorial for completing the module successfully.
+
+## Prerequisites
+
+Before starting this module, students should have completed:
+
+1. **Module 1: ROS 2 Fundamentals** - Understanding of nodes, topics, and basic ROS 2 concepts
+2. **System Requirements Met**:
+   - Ubuntu 22.04 LTS (or WSL2 on Windows)
+   - 16GB+ RAM
+   - Python 3.11+
+   - Node.js 18.x+
+   - Gazebo Garden installed
+   - ROS 2 Humble Hawksbill properly configured
+
+3. **Course Repository Cloned**:
+   ```bash
+   git clone https://github.com/[organization]/physical-ai-humanoid-course.git
+   cd physical-ai-humanoid-course
+   ```
+
+## Step 1: Environment Setup and Verification
+
+### 1.1 Verify Gazebo Installation
+```bash
+# Check Gazebo version
+ign gazebo --version
+
+# Launch a basic world to verify installation
+ign gazebo
+```
+
+**Expected Outcome**: Gazebo GUI should launch without errors and display a basic empty world.
+
+### 1.2 Verify ROS 2 Integration
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Check ROS 2 installation
+ros2 topic list
+```
+
+**Expected Outcome**: Should show system topics without errors.
+
+### 1.3 Navigate to Simulation Examples
+```bash
+# Go to simulation examples directory
+cd simulation-examples
+ls -la
+```
+
+**Expected Outcome**: Should show directories for `gazebo_worlds`, `ros2-workspaces`, `python-scripts`, etc.
+
+## Step 2: Learn Physics Simulation Concepts
+
+### 2.1 Study Core Concepts
+Read through the following materials in order:
+
+1. [Physics Simulation Concepts](./concepts/physics-simulation.mdx)
+2. [Gazebo and Unity Integration Architecture](./architecture/gazebo-unity-integration.mdx)
+3. [Gazebo Implementation Examples](./implementation/gazebo-examples.mdx)
+
+### 2.2 Verify Understanding
+After reading each section, students should be able to:
+- Explain the concept of a digital twin in robotics
+- Describe the components of a physics simulation system
+- Understand the integration between Gazebo and Unity
+- Identify key parameters for realistic physics simulation
+
+## Step 3: Hands-On Practice with Simulation Environments
+
+### 3.1 Run Pre-built Worlds
+```bash
+# Navigate to gazebo worlds directory
+cd simulation-examples/gazebo_worlds
+
+# Launch the indoor office world
+ign gazebo indoor_office.world
+```
+
+**Expected Outcome**: Gazebo should launch with the indoor office environment containing walls, desk, chair, and plant.
+
+### 3.2 Explore the Outdoor Park World
+```bash
+# In a new terminal, source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Launch the outdoor park world
+cd simulation-examples/gazebo_worlds
+ign gazebo outdoor_park.world
+```
+
+**Expected Outcome**: Gazebo should launch with the outdoor park environment containing grass areas, walking paths, trees, and benches.
+
+### 3.3 Experiment with Gazebo Controls
+- Use the GUI to place objects in the environment
+- Test physics interactions by dropping objects
+- Verify that objects behave according to physics laws
+
+## Step 4: Sensor Simulation Practice
+
+### 4.1 Run the Sensor Simulator
+```bash
+# Navigate to ROS 2 workspace
+cd simulation-examples/ros2-workspaces
+
+# Run the sensor simulation example
+python3 basic_nodes/sensor_simulation_example.py
+```
+
+**Expected Outcome**: The sensor simulator node should start and begin publishing sensor data.
+
+### 4.2 Monitor Sensor Data
+In a separate terminal:
+```bash
+# Source ROS 2 environment
+source /opt/ros/humble/setup.bash
+
+# Monitor laser scan data
+ros2 topic echo /laser_scan --field ranges
+
+# Monitor IMU data
+ros2 topic echo /imu/data
+
+# Monitor GPS data
+ros2 topic echo /gps/fix
+```
+
+**Expected Outcome**: Should see continuous streams of sensor data with realistic values.
+
+### 4.3 Run the Advanced Sensor Publisher
+```bash
+# In another terminal, run the advanced sensor publisher
+cd simulation-examples/python-scripts
+python3 sensor_publisher.py
+```
+
+**Expected Outcome**: Multiple sensor topics should be populated with simulated data.
+
+## Step 5: Complete Hands-On Exercises
+
+### 5.1 Basic World Creation Exercise
+Follow the exercises in [Physics Simulation Exercises](./exercises/physics-simulation-exercises.mdx):
+
+1. **Exercise 1**: Create a custom Gazebo world with multiple objects
+2. **Exercise 2**: Integrate a robot model into your custom world
+3. **Exercise 3**: Add sensor simulation to your robot
+4. **Exercise 4**: Implement joint control for your robot
+5. **Exercise 5**: Tune physics properties for realistic behavior
+
+### 5.2 Verification Steps
+After completing each exercise:
+```bash
+# Test your custom world
+ign gazebo path/to/your/custom_world.sdf
+
+# Verify robot appears and has proper physics
+ign topic -t /world/custom_world/model/your_robot/pose/info -e
+
+# Test sensor data
+ros2 topic echo /your_robot/laser_scan
+```
+
+## Step 6: Integration and Documentation
+
+### 6.1 Use Interactive Examples
+Work through the examples in [Simulation Examples Integration](./integration.mdx):
+
+- Run the provided code examples
+- Experiment with different parameters
+- Verify that the documentation examples work as described
+
+### 6.2 Create Your Own Simulation Controller
+Based on the examples, create a simple controller that:
+- Reads sensor data (LIDAR, IMU)
+- Makes decisions based on sensor input
+- Sends commands to the robot
+
+Example controller implementation:
+```python
+#!/usr/bin/env python3
+import rclpy
+from rclpy.node import Node
+from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import Twist
+
+class SimpleController(Node):
+    def __init__(self):
+        super().__init__('simple_controller')
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.scan_sub = self.create_subscription(LaserScan, '/laser_scan', self.scan_callback, 10)
+
+    def scan_callback(self, msg):
+        # Simple obstacle avoidance
+        min_range = min(msg.ranges)
+        cmd = Twist()
+        if min_range > 1.0:
+            cmd.linear.x = 0.5  # Move forward
+        else:
+            cmd.angular.z = 0.5  # Turn
+        self.cmd_pub.publish(cmd)
+
+def main(args=None):
+    rclpy.init(args=args)
+    controller = SimpleController()
+    rclpy.spin(controller)
+    controller.destroy_node()
+    rclpy.shutdown()
+```
+
+## Step 7: Self-Assessment
+
+### 7.1 Knowledge Check
+By the end of this module, you should be able to:
+
+- [ ] Explain the concept of a digital twin and its importance in robotics
+- [ ] Create custom Gazebo worlds with various objects
+- [ ] Integrate robot models with sensors in Gazebo
+- [ ] Simulate realistic physics interactions
+- [ ] Work with different sensor types (LIDAR, IMU, GPS, etc.)
+- [ ] Implement basic robot control in simulation
+- [ ] Understand the integration between Gazebo and Unity
+
+### 7.2 Practical Skills Check
+You should be able to:
+
+- [ ] Launch and configure Gazebo environments
+- [ ] Create and modify SDF files for custom worlds
+- [ ] Add sensors to robot models
+- [ ] Monitor and interpret sensor data
+- [ ] Implement basic navigation behaviors in simulation
+- [ ] Use ROS 2 tools to interact with simulation
+- [ ] Debug common simulation issues
+
+## Step 8: Assessment Completion
+
+### 8.1 Take the Module Assessment
+Complete all sections of the [Simulation Environment Assessment](./assessment.mdx):
+
+1. **Conceptual Questions**: Answer all questions about physics simulation
+2. **Practical Implementation**: Create the required custom world and robot
+3. **Analysis and Debugging**: Solve the provided scenarios
+4. **Advanced Integration**: Design the Unity-Gazebo bridge
+
+### 8.2 Verify Your Solutions
+Test each of your implementations:
+```bash
+# Test your custom world
+ign gazebo your_custom_world.sdf
+
+# Test your robot model
+# Verify it appears and moves correctly
+
+# Test your controller
+ros2 run your_package_name your_controller
+```
+
+## Step 9: Advanced Exploration
+
+### 9.1 Unity Integration
+Review the Unity integration materials in `simulation-examples/unity-scenes/README.md`:
+- Understand the role of Unity in robotics simulation
+- Learn about Human-Robot Interaction (HRI) scenarios
+- Explore possibilities for advanced visualization
+
+### 9.2 Performance Optimization
+Experiment with:
+- Different physics engine parameters
+- Sensor update rates
+- Model complexities
+- Real-time factors
+
+## Troubleshooting Common Issues
+
+### Issue 1: Gazebo Won't Launch
+**Symptoms**: Gazebo fails to start or crashes immediately
+**Solutions**:
+1. Verify Gazebo Garden is properly installed
+2. Check graphics driver compatibility
+3. Ensure sufficient system resources
+
+### Issue 2: Sensor Data Not Publishing
+**Symptoms**: No data on sensor topics
+**Solutions**:
+1. Verify sensor simulation node is running
+2. Check topic names match between publisher and subscriber
+3. Ensure ROS 2 environment is sourced in all terminals
+
+### Issue 3: Robot Physics Issues
+**Symptoms**: Robot falls through floor or behaves unrealistically
+**Solutions**:
+1. Check model mass and inertia values
+2. Verify collision geometries are properly defined
+3. Adjust physics engine parameters
+
+## Next Steps
+
+After successfully completing this module, students should be ready to proceed to:
+
+1. **Module 3: AI-Brain** - Implementing perception and navigation with NVIDIA Isaac tools
+2. **Module 4: Vision-Language-Action** - Developing LLM-driven robot behavior
+3. **Capstone Project** - Integrating all learned concepts
+
+## Completion Verification
+
+To verify successful completion of this module, ensure you can:
+
+1. ✅ Launch and navigate Gazebo environments
+2. ✅ Create custom worlds with appropriate physics
+3. ✅ Integrate robot models with sensors
+4. ✅ Run sensor simulation examples and monitor data
+5. ✅ Implement basic robot control in simulation
+6. ✅ Complete the assessment with working code examples
+7. ✅ Explain key simulation concepts to another person
+
+## Additional Resources
+
+- [Gazebo Tutorials](https://gazebosim.org/tutorials)
+- [ROS 2 Gazebo Integration](https://gazebosim.org/tutorials?tut=ros2_overview)
+- [Simulation Best Practices](https://gazebosim.org/tutorials?tut=simulation_quality)
+- Course discussion forum for questions
+- Documentation on Unity Robotics integration

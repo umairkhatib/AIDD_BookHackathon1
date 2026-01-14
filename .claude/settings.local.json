@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install --prefix website @docusaurus/core @docusaurus/preset-classic clsx prism-react-renderer)",
+      "Bash(npm install)"
+    ]
+  }
+}

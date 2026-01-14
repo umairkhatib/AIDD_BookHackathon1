@@ -1,0 +1,531 @@
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="indoor_office">
+    <!-- Include standard models -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Physics engine -->
+    <physics name="default_physics" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>1000.0</real_time_update_rate>
+    </physics>
+
+    <!-- Office environment -->
+    <!-- Walls -->
+    <model name="wall_north">
+      <pose>0 5 1 0 0 0</pose>
+      <static>1</static>
+      <link name="wall_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_south">
+      <pose>0 -5 1 0 0 0</pose>
+      <static>1</static>
+      <link name="wall_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_east">
+      <pose>5 0 1 0 0 1.5708</pose>
+      <static>1</static>
+      <link name="wall_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="wall_west">
+      <pose>-5 0 1 0 0 1.5708</pose>
+      <static>1</static>
+      <link name="wall_link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>10 0.2 2</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Furniture -->
+    <model name="desk">
+      <pose>-2 2 0.5 0 0 0</pose>
+      <link name="desk_top">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1.5 0.8 0.02</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1.5 0.8 0.02</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.6 0.4 0.2 1</ambient>
+            <diffuse>0.6 0.4 0.2 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>10.0</mass>
+          <inertia>
+            <ixx>1.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>2.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>2.5</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leg1">
+        <pose>0.6 0.3 -0.39 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.01</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leg2">
+        <pose>-0.6 0.3 -0.39 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.01</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leg3">
+        <pose>0.6 -0.3 -0.39 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.01</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leg4">
+        <pose>-0.6 -0.3 -0.39 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.8</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.01</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <joint name="desk_top_to_leg1" type="fixed">
+        <parent>desk_top</parent>
+        <child>leg1</child>
+        <pose>0.6 0.3 -0.4 0 0 0</pose>
+      </joint>
+      <joint name="desk_top_to_leg2" type="fixed">
+        <parent>desk_top</parent>
+        <child>leg2</child>
+        <pose>-0.6 0.3 -0.4 0 0 0</pose>
+      </joint>
+      <joint name="desk_top_to_leg3" type="fixed">
+        <parent>desk_top</parent>
+        <child>leg3</child>
+        <pose>0.6 -0.3 -0.4 0 0 0</pose>
+      </joint>
+      <joint name="desk_top_to_leg4" type="fixed">
+        <parent>desk_top</parent>
+        <child>leg4</child>
+        <pose>-0.6 -0.3 -0.4 0 0 0</pose>
+      </joint>
+    </model>
+
+    <!-- Chair -->
+    <model name="chair">
+      <pose>-2.5 1.5 0.45 0 0 0</pose>
+      <link name="seat">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.4 0.4 0.02</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 0.4 0.02</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.6 1</ambient>
+            <diffuse>0.2 0.2 0.6 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>3.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.15</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="back_rest">
+        <pose>0 0.2 0.2 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.4 0.02 0.4</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.4 0.02 0.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.2 0.2 0.6 1</ambient>
+            <diffuse>0.2 0.2 0.6 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.1</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.1</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.05</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leg1">
+        <pose>0.15 0.15 -0.43 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.9</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>0.05 0.05 0.9</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.3 0.3 0.3 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>1.0</mass>
+          <inertia>
+            <ixx>0.05</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.05</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.01</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <joint name="seat_to_back" type="fixed">
+        <parent>seat</parent>
+        <child>back_rest</child>
+        <pose>0 0.2 0.2 0 0 0</pose>
+      </joint>
+      <joint name="seat_to_leg1" type="fixed">
+        <parent>seat</parent>
+        <child>leg1</child>
+        <pose>0.15 0.15 -0.45 0 0 0</pose>
+      </joint>
+    </model>
+
+    <!-- Plant -->
+    <model name="plant">
+      <pose>3 0 0 0 0 0</pose>
+      <link name="pot">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>0.25</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.15</radius>
+              <length>0.25</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.5 0.3 0.1 1</ambient>
+            <diffuse>0.5 0.3 0.1 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>2.0</mass>
+          <inertia>
+            <ixx>0.05</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.05</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.04</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="plant_body">
+        <pose>0 0 0.2 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.05</radius>
+              <length>0.8</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.05</radius>
+              <length>0.8</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>0.1 0.6 0.1 1</ambient>
+            <diffuse>0.1 0.6 0.1 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>0.5</mass>
+          <inertia>
+            <ixx>0.01</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.01</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.001</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="leaves">
+        <pose>0 0 0.6 0 0 0</pose>
+        <collision name="collision">
+          <geometry>
+            <sphere>
+              <radius>0.2</radius>
+            </sphere>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <sphere>
+              <radius>0.2</radius>
+            </sphere>
+          </geometry>
+          <material>
+            <ambient>0.1 0.7 0.1 1</ambient>
+            <diffuse>0.1 0.7 0.1 1</diffuse>
+          </material>
+        </visual>
+        <inertial>
+          <mass>0.2</mass>
+          <inertia>
+            <ixx>0.002</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.002</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.002</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <joint name="pot_to_body" type="fixed">
+        <parent>pot</parent>
+        <child>plant_body</child>
+        <pose>0 0 0.125 0 0 0</pose>
+      </joint>
+      <joint name="body_to_leaves" type="fixed">
+        <parent>plant_body</parent>
+        <child>leaves</child>
+        <pose>0 0 0.4 0 0 0</pose>
+      </joint>
+    </model>
+
+  </world>
+</sdf>
