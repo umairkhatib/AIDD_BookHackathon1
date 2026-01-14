@@ -24,7 +24,6 @@ const config = {
 
   onBrokenLinks: 'throw',
   markdown: {
-    mermaid: true,
     mdx1Compat: {
       comments: true,
       admonitions: true,
@@ -60,7 +59,6 @@ const config = {
     ],
   ],
 
-  themes: ['@docusaurus/theme-mermaid'],
 
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
