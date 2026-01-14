@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm install --prefix website @docusaurus/core @docusaurus/preset-classic clsx prism-react-renderer)",
-      "Bash(npm install)"
+      "Bash(npm install)",
+      "Bash(git commit -m \"Convert custom CodeBlock components to standard Markdown syntax\n\n- Replace all <CodeBlock> tags with standard Markdown code blocks\n- Remove imports that are no longer needed\n- This should resolve the build issues on Vercel\")"
     ]
   }
 }
