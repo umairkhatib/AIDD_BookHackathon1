@@ -108,7 +108,7 @@ const config = {
           },
           { to: '/search', label: 'Search', position: 'right' }, // Add search link to navbar
           {
-            href: 'https://github.com/your-github-username/physical-ai-humanoid-course',
+            href: 'https://github.com/umairkhatib',
             label: 'GitHub',
             position: 'right',
           },
